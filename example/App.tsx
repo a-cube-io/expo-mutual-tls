@@ -285,19 +285,25 @@ export default function App() {
         body: JSON.stringify({
           "items": [
             {
-              "description": "Pane",
-              "quantity": "1.00",
-              "unit_price": "1.00",
+              "description": "Latte Macchiato",
+              "quantity": "2.00",
+              "unit_price": "2.99",
+              "discount": "5"
+            },
+              {
+              "description": "Espresso Macchiato",
+              "quantity": "3.00",
+              "unit_price": "1.99",
               "discount": "0"
-            }
+              }
           ],
           "customer_tax_code": "QWERT12345",
           "customer_lottery_code": "QWER123",
           "invoice_issuing": true,
           "uncollected_dcr_to_ssn": false,
-          "cash_payment_amount": "0.1",
-          "electronic_payment_amount": "0.3",
-          "ticket_restaurant_payment_amount": "0.6",
+          "cash_payment_amount": "4.0",
+          "electronic_payment_amount": "0.0",
+          "ticket_restaurant_payment_amount": "0.0",
           "ticket_restaurant_quantity": 0
         })
       });

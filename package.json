@@ -1,0 +1,45 @@
+{
+  "name": "expo-mutual-tls",
+  "version": "0.1.0",
+  "description": "Expo Mutual TLS module for iOS and Android.",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "build": "expo-module build",
+    "clean": "expo-module clean",
+    "lint": "expo-module lint",
+    "test": "expo-module test",
+    "prepare": "expo-module prepare",
+    "prepublishOnly": "expo-module prepublishOnly",
+    "expo-module": "expo-module",
+    "open:ios": "xed example/ios",
+    "open:android": "open -a \"Android Studio\" example/android"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "expo-mutual-tls",
+    "ExpoMutualTls"
+  ],
+  "repository": "https://github.com/a-cube-io/expo-mutual-tls.git",
+  "bugs": {
+    "url": "https://github.com/a-cube-io/expo-mutual-tls/issues"
+  },
+  "author": "A-Cube S.r.l. (https://github.com/a-cube-io)",
+  "license": "MIT",
+  "homepage": "https://github.com/a-cube-io/expo-mutual-tls#readme",
+  "dependencies": {
+   "react-native-keychain": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.0.0",
+    "expo-module-scripts": "^4.1.10",
+    "expo": "~53.0.0",
+    "react-native": "0.79.1"
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

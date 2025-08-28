@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "expo-mutual-tls": ["../src/index"],
+      "expo-mutual-tls/*": ["../src/*"]
+    }
+  }
+}

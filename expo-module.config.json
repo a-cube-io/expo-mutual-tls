@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ExpoMutualTlsModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.mutualtls.ExpoMutualTlsModule"]
+  }
+}

@@ -1,0 +1,69 @@
+apply plugin: 'com.android.library'
+
+group = 'expo.modules.mutualtls'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useExpoPublishing()
+
+// If you want to use the managed Android SDK versions from expo-modules-core, set this to true.
+// The Android SDK versions will be bumped from time to time in SDK releases and may introduce breaking changes in your module code.
+// Most of the time, you may like to manage the Android SDK versions yourself.
+def useManagedAndroidSdkVersions = false
+if (useManagedAndroidSdkVersions) {
+  useDefaultAndroidSdkVersions()
+} else {
+  buildscript {
+    // Simple helper that allows the root project to override versions declared by this library.
+    ext.safeExtGet = { prop, fallback ->
+      rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
+    }
+  }
+  project.android {
+    compileSdkVersion safeExtGet("compileSdkVersion", 34)
+    defaultConfig {
+      minSdkVersion safeExtGet("minSdkVersion", 21)
+      targetSdkVersion safeExtGet("targetSdkVersion", 34)
+    }
+  }
+}
+
+android {
+  namespace "expo.modules.mutualtls"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // Expo Modules Core (essential)
+  implementation project(':expo-modules-core')
+
+  // Kotlin stdlib - use version compatible with Expo framework
+  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.21"
+
+  // Coroutines per async/await
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0"
+
+  // OkHttp per HTTP requests con mTLS - use version compatible with Kotlin 2.0.x
+  implementation "com.squareup.okhttp3:okhttp:4.12.0"
+  implementation "com.squareup.okhttp3:okhttp-urlconnection:4.12.0"
+
+  // Security per EncryptedSharedPreferences
+  implementation "androidx.security:security-crypto:1.1.0"
+
+  // BouncyCastle per PEM certificate parsing
+  implementation "org.bouncycastle:bcprov-jdk15on:1.70"
+  implementation "org.bouncycastle:bcpkix-jdk15on:1.70"
+
+  // Optional: Logging per debug
+  implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
+}

@@ -30,22 +30,22 @@ export type CertificateExpiryEventPayload = {
   warning?: boolean;
 };
 
-export type CertificateFormat = 'p12' | 'pem';
+export type CertificateFormat = "p12" | "pem";
 
-export type TlsState = 'notConfigured' | 'configured' | 'error';
+export type TlsState = "notConfigured" | "configured" | "error";
 
 export type MutualTlsConfig = {
   certificateFormat?: CertificateFormat;
   keychainService?: string;
-  
+
   // P12 specific (backward compatibility)
   keychainServiceForP12?: string;
   keychainServiceForPassword?: string;
-  
+
   // PEM specific
   keychainServiceForPrivateKey?: string;
   keychainServiceForCertChain?: string;
-  
+
   enableLogging?: boolean;
   requireUserAuthentication?: boolean;
   userAuthValiditySeconds?: number;
@@ -64,7 +64,6 @@ export type PemCertificateData = {
 };
 
 export type CertificateData = P12CertificateData | PemCertificateData;
-
 
 export type ConfigureResult = {
   success: boolean;

@@ -28,9 +28,6 @@
   "author": "A-Cube S.r.l. (https://github.com/a-cube-io)",
   "license": "MIT",
   "homepage": "https://github.com/a-cube-io/expo-mutual-tls#readme",
-  "dependencies": {
-   "react-native-keychain": "^8.2.0"
-  },
   "devDependencies": {
     "@types/react": "~19.0.0",
     "expo-module-scripts": "^4.1.10",

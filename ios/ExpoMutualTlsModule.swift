@@ -8,7 +8,7 @@ import CryptoKit
 
 // MARK: - Main Module
 
-public class ExpoMutualTlsModule: Module {
+public class ExpoMutualTlsModule: Module, @unchecked Sendable {
     private static let moduleName = "ExpoMutualTls"
     private static let logTag = "ExpoMutualTLS"
     
@@ -42,6 +42,14 @@ public class ExpoMutualTlsModule: Module {
     
     public func definition() -> ModuleDefinition {
         Name(Self.moduleName)
+        
+        // Module initialization
+        OnCreate {
+            // Set up logging for KeychainManager
+            self.keychainManager.setLogger { [weak self] type, message in
+                self?.emitDebugLog(type: type, message: message)
+            }
+        }
         
         // Configuration Management
         AsyncFunction("configure") { [weak self] (config: [String: Any]) in
@@ -125,19 +133,6 @@ public class ExpoMutualTlsModule: Module {
             }
         }
         
-        AsyncFunction("testSimpleRequest") { [weak self] (options: [String: Any]) in
-            guard let self = self else {
-                return MakeRequestResult.failure("Module deallocated").toDictionary()
-            }
-            
-            do {
-                let result = try await self.testSimpleRequest(options: options)
-                return result.toDictionary()
-            } catch {
-                self.handleError(error, context: "testSimpleRequest")
-                return MakeRequestResult.failure(error.localizedDescription).toDictionary()
-            }
-        }
         
         // Properties exposed to JavaScript
         Property("isConfigured") { [weak self] in
@@ -204,11 +199,13 @@ public class ExpoMutualTlsModule: Module {
             return try await storeP12Certificate(p12Base64: p12Data, password: password)
             
         case .pem:
+            emitDebugLog(type: "store_certificate", message: "initializing PEM certificate storage")
             guard let certPem = certificateData["certificate"] as? String,
                   let keyPem = certificateData["privateKey"] as? String else {
                 throw ExpoMutualTlsError.missingRequiredField("Certificate and private key required for PEM")
             }
             let passphrase = certificateData["passphrase"] as? String
+            emitDebugLog(type: "store_certificate", message: "certificate: \(certPem) key: \(keyPem)")
             return try await storePEMCertificate(certificate: certPem, privateKey: keyPem, passphrase: passphrase)
         }
     }
@@ -259,7 +256,53 @@ public class ExpoMutualTlsModule: Module {
     }
     
     private func storePEMCertificate(certificate: String, privateKey: String, passphrase: String?) async throws -> Bool {
-        throw ExpoMutualTlsError.notImplemented("PEM certificate storage")
+        emitDebugLog(type: "certificate_storage", message: "Storing PEM certificate")
+
+        guard let config = currentConfig else {
+            emitErrorEvent(message: "Not configured")
+            throw ExpoMutualTlsError.notConfigured
+        }
+
+        do {
+            // Parse PEM certificate and private key
+            let secCertificate = try certificateParser.parsePEMCertificate(pemString: certificate)
+            let secPrivateKey = try certificateParser.parsePEMPrivateKey(pemString: privateKey)
+            
+            emitDebugLog(type: "certificate_storage", message: "PEM certificate and key parsed successfully")
+            
+            // Get keychain services from config
+            let certService = config.keychainServiceForCertChain ?? "expo.mtls.client.cert"
+            let keyService = config.keychainServiceForPrivateKey ?? "expo.mtls.client.key"
+            
+            emitDebugLog(type: "certificate_storage", message: "Storing PEM certificate with cert service: \(certService), key service: \(keyService)")
+            
+            // Store certificate and private key in keychain
+            try keychainManager.storePEMCertificateAndKey(
+                certService: certService,
+                keyService: keyService,
+                certificate: secCertificate,
+                privateKey: secPrivateKey
+            )
+            
+            emitDebugLog(type: "certificate_storage", message: "PEM certificate and key stored in keychain")
+            
+            // Initialize SSL context with the parsed certificate and key
+            let identity = try keychainManager.retrievePEMIdentity(certService: certService, keyService: keyService)
+            try await initializeSSLContext(identity: identity, certificateChain: [secCertificate])
+            
+            // Update configuration state
+            stateQueue.async(flags: .barrier) { [weak self] in
+                self?._isConfigured = true
+                self?._currentState = .configured
+            }
+            
+            emitDebugLog(type: "certificate_storage", message: "PEM certificate configuration completed")
+            return true
+            
+        } catch {
+            emitDebugLog(type: "certificate_storage", message: "PEM certificate storage failed: \(error.localizedDescription)")
+            throw error
+        }
     }
     
     private func removeCertificate() async throws {
@@ -280,18 +323,17 @@ public class ExpoMutualTlsModule: Module {
                 servicesToRemove.append(passwordService)
             }
             
+            // Remove P12 certificate data from keychain
+            for service in servicesToRemove {
+                try keychainManager.removeFromKeychain(service: service)
+            }
+            
         case .pem:
-            if let certService = config.keychainServiceForCertChain {
-                servicesToRemove.append(certService)
-            }
-            if let keyService = config.keychainServiceForPrivateKey {
-                servicesToRemove.append(keyService)
-            }
-        }
-        
-        // Remove all certificate data from keychain
-        for service in servicesToRemove {
-            try keychainManager.removeFromKeychain(service: service)
+            let certService = config.keychainServiceForCertChain ?? "expo.mtls.client.cert"
+            let keyService = config.keychainServiceForPrivateKey ?? "expo.mtls.client.key"
+            
+            // Remove PEM certificate and key from keychain
+            try keychainManager.removePEMCertificate(certService: certService, keyService: keyService)
         }
         
         // Clear SSL context and reset state
@@ -319,7 +361,7 @@ public class ExpoMutualTlsModule: Module {
             let certService = config.keychainServiceForCertChain ?? "expo.mtls.client.cert"
             let keyService = config.keychainServiceForPrivateKey ?? "expo.mtls.client.key"
             
-            return keychainManager.keychainContainsItem(service: certService) && keychainManager.keychainContainsItem(service: keyService)
+            return keychainManager.hasPEMCertificate(certService: certService, keyService: keyService)
         }
     }
     
@@ -383,36 +425,6 @@ public class ExpoMutualTlsModule: Module {
         }
     }
     
-    private func testSimpleRequest(options: [String: Any]) async throws -> MakeRequestResult {
-        guard let url = options["url"] as? String else {
-            throw ExpoMutualTlsError.missingRequiredField("URL is required")
-        }
-        
-        let method = options["method"] as? String ?? "GET"
-        let headers = options["headers"] as? [String: String] ?? [:]
-        let bodyString = options["body"] as? String
-        let bodyData = bodyString?.data(using: .utf8)
-        
-        emitDebugLog(type: "simple_request", message: "Testing simple request (no mTLS)", method: method, url: url)
-        
-        do {
-            let result = try await networkManager.executeRequest(url: url, method: method, headers: headers, body: bodyData, withMTLS: false)
-            
-            emitDebugLog(
-                type: "simple_request_completed",
-                message: result.success ? "Simple request successful" : "Simple request failed",
-                method: method,
-                url: url,
-                statusCode: result.statusCode
-            )
-            
-            return result
-            
-        } catch {
-            emitDebugLog(type: "simple_request_error", message: "Simple request failed: \(error.localizedDescription)", method: method, url: url)
-            throw error
-        }
-    }
     
     // MARK: - Helper Methods
     
@@ -451,7 +463,13 @@ public class ExpoMutualTlsModule: Module {
             return try certificateParser.parseP12Certificate(p12Data: p12Data, password: password)
             
         case .pem:
-            throw ExpoMutualTlsError.notImplemented("PEM certificate restoration from keychain")
+            let certService = config.keychainServiceForCertChain ?? "expo.mtls.client.cert"
+            let keyService = config.keychainServiceForPrivateKey ?? "expo.mtls.client.key"
+            
+            let identity = try keychainManager.retrievePEMIdentity(certService: certService, keyService: keyService)
+            let certificate = try keychainManager.retrievePEMCertificate(certService: certService)
+            
+            return (identity, [certificate])
         }
     }
     

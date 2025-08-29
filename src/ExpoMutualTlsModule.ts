@@ -10,7 +10,6 @@ declare class ExpoMutualTlsModule extends NativeModule<ExpoMutualTlsModuleEvents
   hasCertificate(): Promise<boolean>;
   testConnection(url: string): Promise<MakeRequestResult>;
   makeRequest(options: MakeRequestOptions): Promise<MakeRequestResult>;
-  testSimpleRequest(options: MakeRequestOptions): Promise<MakeRequestResult>;
   isConfigured: boolean;
   currentState: string;
 }

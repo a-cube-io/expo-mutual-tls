@@ -35,3 +35,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+assets/certificate.pem
+assets/private.pem
+assets/merchant.p12

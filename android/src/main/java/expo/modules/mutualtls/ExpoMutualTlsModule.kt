@@ -224,18 +224,6 @@ class ExpoMutualTlsModule : Module() {
       }
     }
 
-    // --- testSimpleRequest(options) - Network test without mTLS
-    AsyncFunction("testSimpleRequest").Coroutine<Map<String, Any>, Map<String, Any>> { options: Map<String, Any> ->
-      val url = options["url"] as? String ?: throw MutualTlsException("URL is required")
-      val method = (options["method"] as? String ?: "GET").uppercase()
-      @Suppress("UNCHECKED_CAST")
-      val headers = options["headers"] as? Map<String, String> ?: emptyMap()
-      val body = options["body"] as? String
-      
-      withContext<Map<String, Any>>(Dispatchers.IO) {
-        performSimpleRequest(url, method, headers, body)
-      }
-    }
 
     // Properties & events
     Property("isConfigured") { isConfigured }
@@ -637,66 +625,6 @@ class ExpoMutualTlsModule : Module() {
     }
   }
 
-  private fun performSimpleRequest(url: String, method: String, headers: Map<String, String>, body: String?): Map<String, Any> {
-    try {
-      Log.d(TAG, "Testing simple network request to: $url")
-      
-      // Create a simple OkHttp client without mTLS
-      val client = okhttp3.OkHttpClient.Builder()
-        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .dns(okhttp3.Dns.SYSTEM)
-        .addInterceptor { chain ->
-          val request = chain.request()
-          Log.d(TAG, "Simple Request: ${request.method} ${request.url}")
-          try {
-            val response = chain.proceed(request)
-            Log.d(TAG, "Simple Response: ${response.code} for ${request.url}")
-            response
-          } catch (e: Exception) {
-            Log.e(TAG, "Simple Request failed: ${e.message}")
-            throw e
-          }
-        }
-        .build()
-      
-      val requestBuilder = okhttp3.Request.Builder().url(url)
-      
-      // Add headers
-      headers.forEach { (key, value) ->
-        requestBuilder.addHeader(key, value)
-      }
-      
-      // Add body for POST, PUT, PATCH methods
-      val requestBody = when (method) {
-        "POST", "PUT", "PATCH" -> {
-          val mediaType = (headers["content-type"] ?: "application/json").toMediaType()
-          (body ?: "").toRequestBody(mediaType)
-        }
-        else -> null
-      }
-      
-      val request = requestBuilder.method(method, requestBody).build()
-      
-      client.newCall(request).execute().use { response ->
-        val responseBody = response.body?.string() ?: ""
-        
-        return mapOf(
-          "success" to true,
-          "statusCode" to response.code,
-          "statusMessage" to response.message,
-          "headers" to response.headers.toMultimap(),
-          "body" to responseBody,
-          "tlsVersion" to "N/A (simple request)",
-          "cipherSuite" to "N/A (simple request)"
-        )
-      }
-    } catch (e: Exception) {
-      Log.e(TAG, "Simple request failed", e)
-      throw MutualTlsException("Simple request failed: ${e.message}", e)
-    }
-  }
 
   private fun performMtlsRequestWithOptions(url: String, method: String, headers: Map<String, String>, body: String?): Map<String, Any> {
     try {

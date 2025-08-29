@@ -1,5 +1,4 @@
-import { useEvent } from 'expo';
-import ExpoMutualTls, { MutualTlsConfig, CertificateFormat } from 'expo-mutual-tls';
+import ExpoMutualTls, { CertificateFormat } from 'expo-mutual-tls';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { Alert, Button, SafeAreaView, ScrollView, Text, View, StyleSheet } from 'react-native';
@@ -12,31 +11,46 @@ export default function App() {
   const [logs, setLogs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Event listeners
-  const onDebugLog = useEvent(ExpoMutualTls, 'onDebugLog');
-  const onError = useEvent(ExpoMutualTls, 'onError');
-  const onCertificateExpiry = useEvent(ExpoMutualTls, 'onCertificateExpiry');
-
   useEffect(() => {
-    if (onDebugLog) {
-      addLog(`Debug: ${onDebugLog.type} - ${onDebugLog.message || ''}`);
-   console.log(onDebugLog.message);
-    }
-  }, [onDebugLog]);
+    // Set up event listeners using ExpoMutualTls utility functions
+    const debugSubscription = ExpoMutualTls.onDebugLog((event) => {
+      const message = event.message || '';
+      const method = event.method ? ` [${event.method}]` : '';
+      const url = event.url ? ` ${event.url}` : '';
+      const statusCode = event.statusCode ? ` (${event.statusCode})` : '';
+      const duration = event.duration ? ` ${event.duration}ms` : '';
+      
+      addLog(`🔍 Debug [${event.type}]: ${message}${method}${url}${statusCode}${duration}`);
+      console.log(`Debug [${event.type}]:`, message, { method: event.method, url: event.url, statusCode: event.statusCode, duration: event.duration });
+    });
 
-  useEffect(() => {
-    if (onError) {
-      addLog(`Error: ${onError.message}`);
-   //   console.error('Error:', onError);
-    }
-  }, [onError]);
+    const errorSubscription = ExpoMutualTls.onError((event) => {
+      const code = event.code ? ` [${event.code}]` : '';
+      addLog(`❌ Error: ${event.message}${code}`);
+      console.error('mTLS Error:', event.message, event.code ? `Code: ${event.code}` : '');
+    });
 
-  useEffect(() => {
-    if (onCertificateExpiry) {
-      addLog(`Certificate Expiry: ${onCertificateExpiry.subject} - ${new Date(onCertificateExpiry.expiry).toLocaleDateString()}`);
-  //    console.log('Certificate Expiry:', onCertificateExpiry);
-    }
-  }, [onCertificateExpiry]);
+    const expirySubscription = ExpoMutualTls.onCertificateExpiry((event) => {
+      const expiryDate = new Date(event.expiry).toLocaleDateString();
+      const alias = event.alias ? ` (${event.alias})` : '';
+      const warning = event.warning ? ' ⚠️' : '';
+      
+      addLog(`📅 Certificate Expiry${warning}: ${event.subject}${alias} - expires ${expiryDate}`);
+      console.warn('Certificate expiry warning:', {
+        subject: event.subject,
+        alias: event.alias,
+        expiry: expiryDate,
+        warning: event.warning
+      });
+    });
+
+    // Cleanup event listeners on unmounting
+    return () => {
+      debugSubscription.remove();
+      errorSubscription.remove();
+      expirySubscription.remove();
+    };
+  }, []);
 
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -134,7 +148,7 @@ export default function App() {
         FileSystem.readAsStringAsync(keyAsset.localUri, { encoding: FileSystem.EncodingType.UTF8 }),
       ]);
 
-      //console.log('PEM certificate loaded, length:', certificate.length);
+      //console.log('PEM certificate loaded, length: ', certificate.length);
       //console.log('PEM private key loaded, length:', privateKey.length);
 
       return { certificate, privateKey };
@@ -144,21 +158,13 @@ export default function App() {
     }
   };
 
-  // Configure module for P12 format
+  // Configure a module for P12 format using simplified utility
   const configureP12 = async () => {
     try {
       setStatus('Configuring P12...');
       addLog('Configuring module for P12 format');
 
-      const config: MutualTlsConfig = {
-        certificateFormat: 'p12',
-        keychainServiceForP12: 'demo.client.p12',
-        keychainServiceForPassword: 'demo.client.p12.password',
-        enableLogging: true,
-        expiryWarningDays: 30,
-      };
-
-      const result = await ExpoMutualTls.configure(config);
+      const result = await ExpoMutualTls.configureP12('demo.client.p12', true);
       setCurrentFormat('p12');
       setIsConfigured(result.success);
       const hasCert = result.hasCertificate ? ' (Has Certificate)' : ' (No Certificate - Store One)';
@@ -171,31 +177,21 @@ export default function App() {
     }
   };
 
-  // Configure module for PEM format
+  // Configure a module for PEM format using simplified utility
   const configurePEM = async () => {
     try {
       setStatus('Configuring PEM...');
       addLog('Configuring module for PEM format');
 
-      const config: MutualTlsConfig = {
-        certificateFormat: 'pem',
-        keychainServiceForCertChain: 'demo.client.cert',
-        keychainServiceForPrivateKey: 'demo.client.key',
-        enableLogging: true,
-        expiryWarningDays: 30,
-      };
-
-      const result = await ExpoMutualTls.configure(config);
+      const result = await ExpoMutualTls.configurePEM('demo.client.cert', 'demo.client.key', true);
       setCurrentFormat('pem');
       setIsConfigured(result.success);
       const hasCert = result.hasCertificate ? ' (Has Certificate)' : ' (No Certificate - Store One)';
       setStatus(result.success ? `Configured PEM${hasCert}` : 'Configuration Failed');
       addLog(`PEM configuration: ${result.success ? 'Success' : 'Failed'}${result.hasCertificate ? ' - Certificate found' : ' - No certificate, store one first'}`);
-    //  console.log(`PEM configuration: ${result.success ? 'Success' : 'Failed'}${result.hasCertificate ? ' - Certificate found' : ' - No certificate, store one first'}`);
     } catch (error) {
       setStatus('PEM Config Error');
       addLog(`PEM configuration error: ${error}`);
-     // console.error(`PEM configuration error: ${error}`);
       Alert.alert('Configuration Error', `Failed to configure PEM: ${error}`);
     }
   };
@@ -211,10 +207,7 @@ export default function App() {
 
       const { p12Data, password } = await loadP12Certificate();
       
-      await ExpoMutualTls.storeCertificate({
-        p12Data,
-        password,
-      });
+      await ExpoMutualTls.storeP12(p12Data, password);
 
       setStatus('P12 Certificate Stored');
       addLog('P12 certificate stored successfully');
@@ -239,11 +232,7 @@ export default function App() {
 
       const { certificate, privateKey } = await loadPemCertificates();
       
-      await ExpoMutualTls.storeCertificate({
-        certificate,
-        privateKey,
-        // passphrase: 'optional-passphrase-if-key-is-encrypted'
-      });
+      await ExpoMutualTls.storePEM(certificate, privateKey);
 
       setStatus('PEM Certificates Stored');
       addLog('PEM certificates stored successfully');
@@ -285,8 +274,7 @@ export default function App() {
       // Use a test mTLS endpoint - replace it with your actual mTLS test server
       const testUrl = 'https://ereceipts-it.dev.acubeapi.com:444/mf1/receipts';
 
-      const result = await ExpoMutualTls.makeRequest({
-        url: testUrl,
+      const result = await ExpoMutualTls.request(testUrl, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -356,6 +344,13 @@ export default function App() {
     }
   };
 
+  // Clear all event listeners (optional utility - cleanup is handled automatically in useEffect)
+  const clearAllListeners = () => {
+    ExpoMutualTls.removeAllListeners();
+    addLog('🧹 All event listeners cleared');
+    Alert.alert('Listeners Cleared', 'All event listeners have been removed');
+  };
+
  // console.log(logs.map(log => log.replace(/\s+/g, ' ')).join('\n'));
 
   return (
@@ -395,6 +390,10 @@ export default function App() {
 
         <Group name="Testing">
           <Button title="Test mTLS Connection" onPress={testConnection} disabled={!isConfigured} />
+        </Group>
+
+        <Group name="Event Management">
+          <Button title="Clear All Event Listeners" onPress={clearAllListeners} />
         </Group>
 
         <Group name="Logs">

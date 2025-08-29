@@ -133,19 +133,6 @@ public class ExpoMutualTlsModule: Module, @unchecked Sendable {
             }
         }
         
-        AsyncFunction("testSimpleRequest") { [weak self] (options: [String: Any]) in
-            guard let self = self else {
-                return MakeRequestResult.failure("Module deallocated").toDictionary()
-            }
-            
-            do {
-                let result = try await self.testSimpleRequest(options: options)
-                return result.toDictionary()
-            } catch {
-                self.handleError(error, context: "testSimpleRequest")
-                return MakeRequestResult.failure(error.localizedDescription).toDictionary()
-            }
-        }
         
         // Properties exposed to JavaScript
         Property("isConfigured") { [weak self] in
@@ -438,36 +425,6 @@ public class ExpoMutualTlsModule: Module, @unchecked Sendable {
         }
     }
     
-    private func testSimpleRequest(options: [String: Any]) async throws -> MakeRequestResult {
-        guard let url = options["url"] as? String else {
-            throw ExpoMutualTlsError.missingRequiredField("URL is required")
-        }
-        
-        let method = options["method"] as? String ?? "GET"
-        let headers = options["headers"] as? [String: String] ?? [:]
-        let bodyString = options["body"] as? String
-        let bodyData = bodyString?.data(using: .utf8)
-        
-        emitDebugLog(type: "simple_request", message: "Testing simple request (no mTLS)", method: method, url: url)
-        
-        do {
-            let result = try await networkManager.executeRequest(url: url, method: method, headers: headers, body: bodyData, withMTLS: false)
-            
-            emitDebugLog(
-                type: "simple_request_completed",
-                message: result.success ? "Simple request successful" : "Simple request failed",
-                method: method,
-                url: url,
-                statusCode: result.statusCode
-            )
-            
-            return result
-            
-        } catch {
-            emitDebugLog(type: "simple_request_error", message: "Simple request failed: \(error.localizedDescription)", method: method, url: url)
-            throw error
-        }
-    }
     
     // MARK: - Helper Methods
     

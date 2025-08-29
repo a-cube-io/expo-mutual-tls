@@ -65,7 +65,7 @@ export class ExpoMutualTls {
    * Store PEM certificate with simple interface
    * @param certificate - PEM certificate content
    * @param privateKey - PEM private key content
-   * @param passphrase - Optional passphrase for encrypted private key
+   * @param passphrase - Optional passphrase for an encrypted private key
    */
   static async storePEM(certificate: string, privateKey: string, passphrase?: string): Promise<boolean> {
     const certData: PemCertificateData = { certificate, privateKey, passphrase };
@@ -91,7 +91,7 @@ export class ExpoMutualTls {
   }
 
   /**
-   * Get current module state
+   * Get the current module state
    */
   static get isConfigured(): boolean {
     return ExpoMutualTlsModule.isConfigured;
@@ -105,7 +105,7 @@ export class ExpoMutualTls {
   }
 
   /**
-   * Check if certificate is stored
+   * Check if a certificate is stored
    */
   static async hasCertificate(): Promise<boolean> {
     return ExpoMutualTlsModule.hasCertificate();

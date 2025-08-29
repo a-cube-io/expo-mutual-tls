@@ -666,7 +666,7 @@ export default PEMCertificateDemo;
 **Certificate Issues:**
 - Verify certificate format and encoding
 - Check certificate expiry dates
-- Ensure private key matches certificate public key
+- Ensure a private key matches a certificate public key
 
 **Network Issues:**
 - Verify server supports mTLS client certificate authentication
@@ -739,7 +739,8 @@ The raw module interface is still available for advanced use cases via `ExpoMutu
 
 ## Contributing
 
-Contributions are very welcome! Please refer to guidelines described in the [contributing guide]( https://github.com/expo/expo#contributing).
+Contributions are very welcome!
+Please refer to guidelines described in the [contributing guide]( https://github.com/a-cube-io/expo-mutual-tls#contributing).
 
 ### Development Setup
 
@@ -754,10 +755,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- 📋 [GitHub Issues](https://github.com/yourusername/expo-mutual-tls/issues)
-- 📖 [Documentation](https://docs.example.com/expo-mutual-tls)
-- 💬 [Community Forum](https://forums.expo.dev)
-
+- 📋 [GitHub Issues](https://github.com/a-cube-io/expo-mutual-tls/issues)
+- 📖 [Documentation](https://github.com/a-cube-io/expo-mutual-tls)
 ---
 
 **Made with ❤️ for secure mobile applications**

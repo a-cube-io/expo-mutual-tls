@@ -272,38 +272,16 @@ export default function App() {
       addLog('Testing mTLS connection to test server');
 
       // Use a test mTLS endpoint - replace it with your actual mTLS test server
-      const testUrl = 'https://ereceipts-it.dev.acubeapi.com:444/mf1/receipts';
+
+      const testUrl = 'https:your-test-server.com/api/v1/test';
 
       const result = await ExpoMutualTls.request(testUrl, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'Authorization': `Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTY0MDAzOTYsImV4cCI6MTc1NjQ4Njc5Niwicm9sZXMiOnsiZXJlY2VpcHRzLWl0LmFjdWJlYXBpLmNvbSI6WyJST0xFX01FUkNIQU5UIl19LCJ1c2VybmFtZSI6Im1lcmNhbnRlaW5maWVyYTE5QGdtYWlsLmNvbSIsInVpZCI6MTUxNCwiZmlkIjpudWxsLCJwaWQiOm51bGx9.bBG7FAlUqi3I3rpOhnQf_zN_UcDbn1DJw7ckMj_sn0s7iTgsO5bnFJNNOY2IcLAm1GOVj6Da6I0kQc513kbnaDp1KmLoMcMHgvVHE7nEp9ct_LxNrHRzXTvszxSgbGzpCgXAdF2m88-pmnuVJlPezU-mac0Z7KwbfnIivK6kMaPwK9fJt6CUyvUEd2tOHacew6eqVBZbu_VfpVwz03XNpj7QrnfgJooSx2K1nvn7OIeROQWEwvrQ4apzS3cA571M1xWFFZc-d1qAh_gdYoE2aYoW25xm_2dMrWUmqbtZHElLSCUNxgrpuNU5tw73wF_BLThfjYgju8x0vylNekFV3OH1kQDATMRpfgVHpH9vV0JBbO3XQirmD4AzbMn7xuCvUAslF5cjLakHRA4QkQQgIoiveD1p2x9Fedaw-eg3DJ72AVuu6qK6I2ExGw5L-R8EAKpQZ6Jjc7LKz1rOCNZfvhmoOtW_FgTMp9vNbZWydnB9pEq-deQpcredUzRRyOlZuBKtn_m-5aYCkk_Gb_n1pCV6SYeaywCULVCy15LgUVlr8B88mIkq_IF7OIN25V5HPHc0Y9Eh8rmxB9qw6aCjD4ECjENFFljR9xk9dzhqtaLE1Ye30MV7_KrpR0Q7_uboagV687g-RbCkgXiv0lyrCg4XourzIUEd9zIxQiBciIY`
+          'Authorization': 'Bearer your-token-here',
         },
-        body: JSON.stringify({
-          "items": [
-            {
-              "description": "Latte Macchiato",
-              "quantity": "2.00",
-              "unit_price": "2.99",
-              "discount": "5"
-            },
-              {
-              "description": "Espresso Macchiato",
-              "quantity": "3.00",
-              "unit_price": "1.99",
-              "discount": "0"
-              }
-          ],
-          "customer_tax_code": "QWERT12345",
-          "customer_lottery_code": "QWER123",
-          "invoice_issuing": true,
-          "uncollected_dcr_to_ssn": false,
-          "cash_payment_amount": "4.0",
-          "electronic_payment_amount": "0.0",
-          "ticket_restaurant_payment_amount": "0.0",
-          "ticket_restaurant_quantity": 0
-        })
+        body: JSON.stringify({ test: 'data' }),
       });
 
       console.log('mTLS Request Result:', result);

@@ -21,7 +21,7 @@ update_version() {
         rm -f example/package.json.bak
     fi
     
-    echo "✅ Updated version to $new_version"
+    echo "✅ Updated version to $new_version" >&2  # Send to stderr, not stdout
 }
 
 # Increment version

@@ -65,14 +65,6 @@ export type PemCertificateData = {
 
 export type CertificateData = P12CertificateData | PemCertificateData;
 
-export type TestConnectionResult = {
-  success: boolean;
-  statusCode?: number;
-  statusMessage?: string;
-  headers?: Record<string, string[]>;
-  tlsVersion?: string;
-  cipherSuite?: string;
-};
 
 export type ConfigureResult = {
   success: boolean;

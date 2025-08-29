@@ -1,5 +1,4 @@
-import { useEvent } from 'expo';
-import ExpoMutualTls, { MutualTlsConfig, CertificateFormat } from 'expo-mutual-tls';
+import ExpoMutualTls, { CertificateFormat } from 'expo-mutual-tls';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { Alert, Button, SafeAreaView, ScrollView, Text, View, StyleSheet } from 'react-native';
@@ -12,32 +11,51 @@ export default function App() {
   const [logs, setLogs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Event listeners
-  const onDebugLog = useEvent(ExpoMutualTls, 'onDebugLog');
-  const onError = useEvent(ExpoMutualTls, 'onError');
-  const onCertificateExpiry = useEvent(ExpoMutualTls, 'onCertificateExpiry');
-
   useEffect(() => {
-    if (onDebugLog) {
-      addLog(`Debug: ${onDebugLog.type} - ${onDebugLog.message || ''}`);
-    }
-  }, [onDebugLog]);
+    // Set up event listeners using ExpoMutualTls utility functions
+    const debugSubscription = ExpoMutualTls.onDebugLog((event) => {
+      const message = event.message || '';
+      const method = event.method ? ` [${event.method}]` : '';
+      const url = event.url ? ` ${event.url}` : '';
+      const statusCode = event.statusCode ? ` (${event.statusCode})` : '';
+      const duration = event.duration ? ` ${event.duration}ms` : '';
+      
+      addLog(`🔍 Debug [${event.type}]: ${message}${method}${url}${statusCode}${duration}`);
+      console.log(`Debug [${event.type}]:`, message, { method: event.method, url: event.url, statusCode: event.statusCode, duration: event.duration });
+    });
 
-  useEffect(() => {
-    if (onError) {
-      addLog(`Error: ${onError.message}`);
-    }
-  }, [onError]);
+    const errorSubscription = ExpoMutualTls.onError((event) => {
+      const code = event.code ? ` [${event.code}]` : '';
+      addLog(`❌ Error: ${event.message}${code}`);
+      console.error('mTLS Error:', event.message, event.code ? `Code: ${event.code}` : '');
+    });
 
-  useEffect(() => {
-    if (onCertificateExpiry) {
-      addLog(`Certificate Expiry: ${onCertificateExpiry.subject} - ${new Date(onCertificateExpiry.expiry).toLocaleDateString()}`);
-    }
-  }, [onCertificateExpiry]);
+    const expirySubscription = ExpoMutualTls.onCertificateExpiry((event) => {
+      const expiryDate = new Date(event.expiry).toLocaleDateString();
+      const alias = event.alias ? ` (${event.alias})` : '';
+      const warning = event.warning ? ' ⚠️' : '';
+      
+      addLog(`📅 Certificate Expiry${warning}: ${event.subject}${alias} - expires ${expiryDate}`);
+      console.warn('Certificate expiry warning:', {
+        subject: event.subject,
+        alias: event.alias,
+        expiry: expiryDate,
+        warning: event.warning
+      });
+    });
+
+    // Cleanup event listeners on unmounting
+    return () => {
+      debugSubscription.remove();
+      errorSubscription.remove();
+      expirySubscription.remove();
+    };
+  }, []);
 
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 19)]);
+//    console.log(`[${timestamp}] ${message}`);
   };
 
   const clearLogs = () => {
@@ -94,7 +112,7 @@ export default function App() {
         require('./assets/private.pem'),
       ]);
 
-      console.log('PEM assets loaded:', {
+     /* console.log('PEM assets loaded:', {
         certificate: {
           name: certAsset.name,
           type: certAsset.type,
@@ -107,7 +125,7 @@ export default function App() {
           localUri: keyAsset.localUri,
           downloaded: keyAsset.downloaded
         }
-      });
+      });*/
 
       if (!certAsset.localUri || !keyAsset.localUri) {
         throw new Error('Failed to load PEM assets - no local URIs available');
@@ -123,15 +141,15 @@ export default function App() {
         throw new Error('PEM files do not exist at local URIs');
       }
 
-      console.log('PEM file info:', { certFileInfo, keyFileInfo });
+      //console.log('PEM file info:', { certFileInfo, keyFileInfo });
 
       const [certificate, privateKey] = await Promise.all([
         FileSystem.readAsStringAsync(certAsset.localUri, { encoding: FileSystem.EncodingType.UTF8 }),
         FileSystem.readAsStringAsync(keyAsset.localUri, { encoding: FileSystem.EncodingType.UTF8 }),
       ]);
 
-      console.log('PEM certificate loaded, length:', certificate.length);
-      console.log('PEM private key loaded, length:', privateKey.length);
+      //console.log('PEM certificate loaded, length: ', certificate.length);
+      //console.log('PEM private key loaded, length:', privateKey.length);
 
       return { certificate, privateKey };
     } catch (error) {
@@ -140,21 +158,13 @@ export default function App() {
     }
   };
 
-  // Configure module for P12 format
+  // Configure a module for P12 format using simplified utility
   const configureP12 = async () => {
     try {
       setStatus('Configuring P12...');
       addLog('Configuring module for P12 format');
 
-      const config: MutualTlsConfig = {
-        certificateFormat: 'p12',
-        keychainServiceForP12: 'demo.client.p12',
-        keychainServiceForPassword: 'demo.client.p12.password',
-        enableLogging: true,
-        expiryWarningDays: 30,
-      };
-
-      const result = await ExpoMutualTls.configure(config);
+      const result = await ExpoMutualTls.configureP12('demo.client.p12', true);
       setCurrentFormat('p12');
       setIsConfigured(result.success);
       const hasCert = result.hasCertificate ? ' (Has Certificate)' : ' (No Certificate - Store One)';
@@ -167,21 +177,13 @@ export default function App() {
     }
   };
 
-  // Configure module for PEM format
+  // Configure a module for PEM format using simplified utility
   const configurePEM = async () => {
     try {
       setStatus('Configuring PEM...');
       addLog('Configuring module for PEM format');
 
-      const config: MutualTlsConfig = {
-        certificateFormat: 'pem',
-        keychainServiceForCertChain: 'demo.client.cert',
-        keychainServiceForPrivateKey: 'demo.client.key',
-        enableLogging: true,
-        expiryWarningDays: 30,
-      };
-
-      const result = await ExpoMutualTls.configure(config);
+      const result = await ExpoMutualTls.configurePEM('demo.client.cert', 'demo.client.key', true);
       setCurrentFormat('pem');
       setIsConfigured(result.success);
       const hasCert = result.hasCertificate ? ' (Has Certificate)' : ' (No Certificate - Store One)';
@@ -205,10 +207,7 @@ export default function App() {
 
       const { p12Data, password } = await loadP12Certificate();
       
-      await ExpoMutualTls.storeCertificate({
-        p12Data,
-        password,
-      });
+      await ExpoMutualTls.storeP12(p12Data, password);
 
       setStatus('P12 Certificate Stored');
       addLog('P12 certificate stored successfully');
@@ -233,18 +232,16 @@ export default function App() {
 
       const { certificate, privateKey } = await loadPemCertificates();
       
-      await ExpoMutualTls.storeCertificate({
-        certificate,
-        privateKey,
-        // passphrase: 'optional-passphrase-if-key-is-encrypted'
-      });
+      await ExpoMutualTls.storePEM(certificate, privateKey);
 
       setStatus('PEM Certificates Stored');
       addLog('PEM certificates stored successfully');
       Alert.alert('Success', 'PEM certificates stored successfully');
+     // console.log('PEM certificates stored successfully');
     } catch (error) {
       setStatus('PEM Store Error');
       addLog(`PEM storage error: ${error}`);
+    //  console.error('PEM storage error:', error);
       Alert.alert('Storage Error', `Failed to store PEM certificates: ${error}`);
     } finally {
       setIsLoading(false);
@@ -258,10 +255,12 @@ export default function App() {
       const hasCerts = await ExpoMutualTls.hasCertificate();
       setStatus(`Certificates: ${hasCerts ? 'Present' : 'Not Found'}`);
       addLog(`Certificates check: ${hasCerts ? 'Found' : 'Not found'}`);
+     // console.log('Certificates check result:', hasCerts);
       Alert.alert('Certificate Check', `Certificates are ${hasCerts ? 'present' : 'not found'}`);
     } catch (error) {
       setStatus('Check Error');
       addLog(`Certificate check error: ${error}`);
+   //   console.error('Certificate check error:', error);
       Alert.alert('Check Error', `Failed to check certificates: ${error}`);
     }
   };
@@ -273,33 +272,16 @@ export default function App() {
       addLog('Testing mTLS connection to test server');
 
       // Use a test mTLS endpoint - replace it with your actual mTLS test server
-      const testUrl = 'https://ereceipts-it.dev.acubeapi.com:444/mf1/receipts';
 
-      const result = await ExpoMutualTls.makeRequest({
-        url: testUrl,
+      const testUrl = 'https:your-test-server.com/api/v1/test';
+
+      const result = await ExpoMutualTls.request(testUrl, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'Authorization': `Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYzMTA0NDMsImV4cCI6MTc1NjM5Njg0Mywicm9sZXMiOnsiZXJlY2VpcHRzLWl0LmFjdWJlYXBpLmNvbSI6WyJST0xFX01FUkNIQU5UIl19LCJ1c2VybmFtZSI6Im1lcmNhbnRlaW5maWVyYTE5QGdtYWlsLmNvbSIsInVpZCI6MTUxNCwiZmlkIjpudWxsLCJwaWQiOm51bGx9.b9n5QCTrkxyJN73lSj9VRX4KMqlIuXYWGF-EOorwLjC07AF1k5csotu5hUkBBdjtTO692OXtcPWbCw3D2OHuoBw-WPdMwhRWQYK2tZuVMu0XNsVOHDZdyxt8zIcMc8WnaV45-BQOABhQFp8Z60j7ghrOCLUjBxGb8TSB0FxgvBGJXUUEmayu55bCtkKJVHHQbZdz3m1Iyf271F-Cr9obDAkO3AFBnkk-XwYtUYY1Qao7RMgV-cAEeDigAUM12EKv3jdGdL-Lfp03fQxwPP3HNpkb3mvVU-1nZOFKMMah2plFQ_Ne7NF_UwmRF3qgJ2pIBCE3GhrRNp3I6qHHf1UEmqF4tJtfYtlSCBAkoXws1FqZxKHb0lIsAPKMDbYVGjPgxSosgD8xLVPeT9GsgSrpkU3tiE_LP4CVHuFhAWOoI0QXDkRGSKBCFRK7iaxjh53L1T-qDDTE6SCEUKGnmqAn_NXnHQXsG8Kp9Vtfe2PP6NIzMQcJa_QTLf5pBzg1RP69_TRz5TuzWtBdbdDwSXV30hysGzKHv59GVW8J_BOQCThX4_T8ftNTnx36y9ZVcnXtzciDEefTPjiwySOe6EeeLimqIfylM5GcYp3j29s71Pzn682P5gKL52-mQPTLACqZz-uI8NGtEd5wjZ1phV6IMfFeyn0jQzpi2t4vLW1Fy_4`
+          'Authorization': 'Bearer your-token-here',
         },
-        body: JSON.stringify({
-          "items": [
-            {
-              "description": "Pane",
-              "quantity": "1.00",
-              "unit_price": "1.00",
-              "discount": "0"
-            }
-          ],
-          "customer_tax_code": "QWERT12345",
-          "customer_lottery_code": "QWER123",
-          "invoice_issuing": true,
-          "uncollected_dcr_to_ssn": false,
-          "cash_payment_amount": "0.1",
-          "electronic_payment_amount": "0.3",
-          "ticket_restaurant_payment_amount": "0.6",
-          "ticket_restaurant_quantity": 0
-        })
+        body: JSON.stringify({ test: 'data' }),
       });
 
       console.log('mTLS Request Result:', result);
@@ -310,13 +292,16 @@ export default function App() {
       if (result.success) {
         addLog(`Connection successful! Status: ${result.statusCode}, TLS: ${result.tlsVersion}, Cipher: ${result.cipherSuite}`);
         Alert.alert('Connection Success', `Status: ${result.statusCode}\nTLS Version: ${result.tlsVersion}\nCipher Suite: ${result.cipherSuite}`);
+     //   console.log('Connection successful! Status:', result.statusCode, 'TLS:', result.tlsVersion, 'Cipher:', result.cipherSuite);
       } else {
         addLog(`Connection failed`);
         Alert.alert('Connection Failed', 'mTLS connection failed');
+        console.log('Connection failed');
       }
     } catch (error) {
       setStatus('Connection Error');
       addLog(`Connection error: ${error}`);
+     // console.error('Connection error:', error);
       Alert.alert('Connection Error', `Failed to test connection: ${error}`);
     }
   };
@@ -336,6 +321,15 @@ export default function App() {
       Alert.alert('Remove Error', `Failed to remove certificates: ${error}`);
     }
   };
+
+  // Clear all event listeners (optional utility - cleanup is handled automatically in useEffect)
+  const clearAllListeners = () => {
+    ExpoMutualTls.removeAllListeners();
+    addLog('🧹 All event listeners cleared');
+    Alert.alert('Listeners Cleared', 'All event listeners have been removed');
+  };
+
+ // console.log(logs.map(log => log.replace(/\s+/g, ' ')).join('\n'));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -374,6 +368,10 @@ export default function App() {
 
         <Group name="Testing">
           <Button title="Test mTLS Connection" onPress={testConnection} disabled={!isConfigured} />
+        </Group>
+
+        <Group name="Event Management">
+          <Button title="Clear All Event Listeners" onPress={clearAllListeners} />
         </Group>
 
         <Group name="Logs">

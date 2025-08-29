@@ -20,24 +20,28 @@ export default function App() {
   useEffect(() => {
     if (onDebugLog) {
       addLog(`Debug: ${onDebugLog.type} - ${onDebugLog.message || ''}`);
+   console.log(onDebugLog.message);
     }
   }, [onDebugLog]);
 
   useEffect(() => {
     if (onError) {
       addLog(`Error: ${onError.message}`);
+   //   console.error('Error:', onError);
     }
   }, [onError]);
 
   useEffect(() => {
     if (onCertificateExpiry) {
       addLog(`Certificate Expiry: ${onCertificateExpiry.subject} - ${new Date(onCertificateExpiry.expiry).toLocaleDateString()}`);
+  //    console.log('Certificate Expiry:', onCertificateExpiry);
     }
   }, [onCertificateExpiry]);
 
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 19)]);
+//    console.log(`[${timestamp}] ${message}`);
   };
 
   const clearLogs = () => {
@@ -94,7 +98,7 @@ export default function App() {
         require('./assets/private.pem'),
       ]);
 
-      console.log('PEM assets loaded:', {
+     /* console.log('PEM assets loaded:', {
         certificate: {
           name: certAsset.name,
           type: certAsset.type,
@@ -107,7 +111,7 @@ export default function App() {
           localUri: keyAsset.localUri,
           downloaded: keyAsset.downloaded
         }
-      });
+      });*/
 
       if (!certAsset.localUri || !keyAsset.localUri) {
         throw new Error('Failed to load PEM assets - no local URIs available');
@@ -123,15 +127,15 @@ export default function App() {
         throw new Error('PEM files do not exist at local URIs');
       }
 
-      console.log('PEM file info:', { certFileInfo, keyFileInfo });
+      //console.log('PEM file info:', { certFileInfo, keyFileInfo });
 
       const [certificate, privateKey] = await Promise.all([
         FileSystem.readAsStringAsync(certAsset.localUri, { encoding: FileSystem.EncodingType.UTF8 }),
         FileSystem.readAsStringAsync(keyAsset.localUri, { encoding: FileSystem.EncodingType.UTF8 }),
       ]);
 
-      console.log('PEM certificate loaded, length:', certificate.length);
-      console.log('PEM private key loaded, length:', privateKey.length);
+      //console.log('PEM certificate loaded, length:', certificate.length);
+      //console.log('PEM private key loaded, length:', privateKey.length);
 
       return { certificate, privateKey };
     } catch (error) {
@@ -187,9 +191,11 @@ export default function App() {
       const hasCert = result.hasCertificate ? ' (Has Certificate)' : ' (No Certificate - Store One)';
       setStatus(result.success ? `Configured PEM${hasCert}` : 'Configuration Failed');
       addLog(`PEM configuration: ${result.success ? 'Success' : 'Failed'}${result.hasCertificate ? ' - Certificate found' : ' - No certificate, store one first'}`);
+    //  console.log(`PEM configuration: ${result.success ? 'Success' : 'Failed'}${result.hasCertificate ? ' - Certificate found' : ' - No certificate, store one first'}`);
     } catch (error) {
       setStatus('PEM Config Error');
       addLog(`PEM configuration error: ${error}`);
+     // console.error(`PEM configuration error: ${error}`);
       Alert.alert('Configuration Error', `Failed to configure PEM: ${error}`);
     }
   };
@@ -242,9 +248,11 @@ export default function App() {
       setStatus('PEM Certificates Stored');
       addLog('PEM certificates stored successfully');
       Alert.alert('Success', 'PEM certificates stored successfully');
+     // console.log('PEM certificates stored successfully');
     } catch (error) {
       setStatus('PEM Store Error');
       addLog(`PEM storage error: ${error}`);
+    //  console.error('PEM storage error:', error);
       Alert.alert('Storage Error', `Failed to store PEM certificates: ${error}`);
     } finally {
       setIsLoading(false);
@@ -258,10 +266,12 @@ export default function App() {
       const hasCerts = await ExpoMutualTls.hasCertificate();
       setStatus(`Certificates: ${hasCerts ? 'Present' : 'Not Found'}`);
       addLog(`Certificates check: ${hasCerts ? 'Found' : 'Not found'}`);
+     // console.log('Certificates check result:', hasCerts);
       Alert.alert('Certificate Check', `Certificates are ${hasCerts ? 'present' : 'not found'}`);
     } catch (error) {
       setStatus('Check Error');
       addLog(`Certificate check error: ${error}`);
+   //   console.error('Certificate check error:', error);
       Alert.alert('Check Error', `Failed to check certificates: ${error}`);
     }
   };
@@ -280,7 +290,7 @@ export default function App() {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'Authorization': `Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYzMTA0NDMsImV4cCI6MTc1NjM5Njg0Mywicm9sZXMiOnsiZXJlY2VpcHRzLWl0LmFjdWJlYXBpLmNvbSI6WyJST0xFX01FUkNIQU5UIl19LCJ1c2VybmFtZSI6Im1lcmNhbnRlaW5maWVyYTE5QGdtYWlsLmNvbSIsInVpZCI6MTUxNCwiZmlkIjpudWxsLCJwaWQiOm51bGx9.b9n5QCTrkxyJN73lSj9VRX4KMqlIuXYWGF-EOorwLjC07AF1k5csotu5hUkBBdjtTO692OXtcPWbCw3D2OHuoBw-WPdMwhRWQYK2tZuVMu0XNsVOHDZdyxt8zIcMc8WnaV45-BQOABhQFp8Z60j7ghrOCLUjBxGb8TSB0FxgvBGJXUUEmayu55bCtkKJVHHQbZdz3m1Iyf271F-Cr9obDAkO3AFBnkk-XwYtUYY1Qao7RMgV-cAEeDigAUM12EKv3jdGdL-Lfp03fQxwPP3HNpkb3mvVU-1nZOFKMMah2plFQ_Ne7NF_UwmRF3qgJ2pIBCE3GhrRNp3I6qHHf1UEmqF4tJtfYtlSCBAkoXws1FqZxKHb0lIsAPKMDbYVGjPgxSosgD8xLVPeT9GsgSrpkU3tiE_LP4CVHuFhAWOoI0QXDkRGSKBCFRK7iaxjh53L1T-qDDTE6SCEUKGnmqAn_NXnHQXsG8Kp9Vtfe2PP6NIzMQcJa_QTLf5pBzg1RP69_TRz5TuzWtBdbdDwSXV30hysGzKHv59GVW8J_BOQCThX4_T8ftNTnx36y9ZVcnXtzciDEefTPjiwySOe6EeeLimqIfylM5GcYp3j29s71Pzn682P5gKL52-mQPTLACqZz-uI8NGtEd5wjZ1phV6IMfFeyn0jQzpi2t4vLW1Fy_4`
+          'Authorization': `Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTY0MDAzOTYsImV4cCI6MTc1NjQ4Njc5Niwicm9sZXMiOnsiZXJlY2VpcHRzLWl0LmFjdWJlYXBpLmNvbSI6WyJST0xFX01FUkNIQU5UIl19LCJ1c2VybmFtZSI6Im1lcmNhbnRlaW5maWVyYTE5QGdtYWlsLmNvbSIsInVpZCI6MTUxNCwiZmlkIjpudWxsLCJwaWQiOm51bGx9.bBG7FAlUqi3I3rpOhnQf_zN_UcDbn1DJw7ckMj_sn0s7iTgsO5bnFJNNOY2IcLAm1GOVj6Da6I0kQc513kbnaDp1KmLoMcMHgvVHE7nEp9ct_LxNrHRzXTvszxSgbGzpCgXAdF2m88-pmnuVJlPezU-mac0Z7KwbfnIivK6kMaPwK9fJt6CUyvUEd2tOHacew6eqVBZbu_VfpVwz03XNpj7QrnfgJooSx2K1nvn7OIeROQWEwvrQ4apzS3cA571M1xWFFZc-d1qAh_gdYoE2aYoW25xm_2dMrWUmqbtZHElLSCUNxgrpuNU5tw73wF_BLThfjYgju8x0vylNekFV3OH1kQDATMRpfgVHpH9vV0JBbO3XQirmD4AzbMn7xuCvUAslF5cjLakHRA4QkQQgIoiveD1p2x9Fedaw-eg3DJ72AVuu6qK6I2ExGw5L-R8EAKpQZ6Jjc7LKz1rOCNZfvhmoOtW_FgTMp9vNbZWydnB9pEq-deQpcredUzRRyOlZuBKtn_m-5aYCkk_Gb_n1pCV6SYeaywCULVCy15LgUVlr8B88mIkq_IF7OIN25V5HPHc0Y9Eh8rmxB9qw6aCjD4ECjENFFljR9xk9dzhqtaLE1Ye30MV7_KrpR0Q7_uboagV687g-RbCkgXiv0lyrCg4XourzIUEd9zIxQiBciIY`
         },
         body: JSON.stringify({
           "items": [
@@ -316,13 +326,16 @@ export default function App() {
       if (result.success) {
         addLog(`Connection successful! Status: ${result.statusCode}, TLS: ${result.tlsVersion}, Cipher: ${result.cipherSuite}`);
         Alert.alert('Connection Success', `Status: ${result.statusCode}\nTLS Version: ${result.tlsVersion}\nCipher Suite: ${result.cipherSuite}`);
+     //   console.log('Connection successful! Status:', result.statusCode, 'TLS:', result.tlsVersion, 'Cipher:', result.cipherSuite);
       } else {
         addLog(`Connection failed`);
         Alert.alert('Connection Failed', 'mTLS connection failed');
+        console.log('Connection failed');
       }
     } catch (error) {
       setStatus('Connection Error');
       addLog(`Connection error: ${error}`);
+     // console.error('Connection error:', error);
       Alert.alert('Connection Error', `Failed to test connection: ${error}`);
     }
   };
@@ -342,6 +355,8 @@ export default function App() {
       Alert.alert('Remove Error', `Failed to remove certificates: ${error}`);
     }
   };
+
+ // console.log(logs.map(log => log.replace(/\s+/g, ' ')).join('\n'));
 
   return (
     <SafeAreaView style={styles.container}>

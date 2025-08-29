@@ -5,18 +5,18 @@ import Foundation
 
 // MARK: - Enums and Types
 
-public enum CertificateFormat: String, CaseIterable, Enumerable {
+public enum CertificateFormat: String, CaseIterable, Enumerable, Sendable {
     case p12 = "p12"
     case pem = "pem"
 }
 
-public enum TlsState: String, CaseIterable, Enumerable {
+public enum TlsState: String, CaseIterable, Enumerable, Sendable {
     case notConfigured = "notConfigured"
     case configured = "configured"
     case error = "error"
 }
 
-internal enum KeyType {
+internal enum KeyType: Sendable {
     case rsa
     case ec
     case pkcs8
@@ -26,7 +26,7 @@ internal enum KeyType {
 
 // MARK: - Configuration and Result Types
 
-public struct MutualTlsConfig {
+public struct MutualTlsConfig: Sendable {
     let certificateFormat: CertificateFormat
     let keychainService: String?
     
@@ -57,7 +57,7 @@ public struct MutualTlsConfig {
     }
 }
 
-public struct ConfigureResult {
+public struct ConfigureResult: Sendable {
     let success: Bool
     let state: TlsState
     let hasCertificate: Bool
@@ -75,7 +75,7 @@ public struct ConfigureResult {
     }
 }
 
-public struct MakeRequestResult {
+public struct MakeRequestResult: Sendable {
     let success: Bool
     let statusCode: Int
     let statusMessage: String

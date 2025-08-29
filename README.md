@@ -27,13 +27,13 @@ This Expo module provides secure, hardware-backed mTLS client certificate authen
 ### Installation
 
 ```bash
-npx expo install expo-mutual-tls
+npx expo install '@a-cube-io/expo-mutual-tls'
 ```
 
 ### Basic Usage
 
 ```typescript
-import ExpoMutualTls from 'expo-mutual-tls';
+import ExpoMutualTls from '@a-cube-io/expo-mutual-tls';
 
 // Configure for P12 certificates
 await ExpoMutualTls.configureP12('my-keychain-service', true);
@@ -265,7 +265,7 @@ ExpoMutualTls.removeAllListeners();
 
 ```typescript
 import { useEffect } from 'react';
-import ExpoMutualTls from 'expo-mutual-tls';
+import ExpoMutualTls from '@a-cube-io/expo-mutual-tls';
 
 export default function MyComponent() {
   useEffect(() => {
@@ -321,7 +321,7 @@ export default function MyComponent() {
 For advanced use cases, you can use the raw module interface:
 
 ```typescript
-import { ExpoMutualTlsModuleRaw, MutualTlsConfig } from 'expo-mutual-tls';
+import { ExpoMutualTlsModuleRaw, MutualTlsConfig } from '@a-cube-io/expo-mutual-tls';
 
 const config: MutualTlsConfig = {
   certificateFormat: 'p12',
@@ -411,7 +411,7 @@ try {
 
 ```typescript
 import React, { useEffect, useState } from 'react';
-import ExpoMutualTls from 'expo-mutual-tls';
+import ExpoMutualTls from '@a-cube-io/expo-mutual-tls';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 
@@ -550,7 +550,7 @@ export default function App() {
 
 ```typescript
 import React, { useEffect } from 'react';
-import ExpoMutualTls from 'expo-mutual-tls';
+import ExpoMutualTls from '@a-cube-io/expo-mutual-tls';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 
@@ -718,7 +718,7 @@ The v0.1.x release introduces simplified utility functions:
 
 **Before (v0.0.x):**
 ```typescript
-import ExpoMutualTlsModule, { MutualTlsConfig } from 'expo-mutual-tls';
+import ExpoMutualTlsModule, { MutualTlsConfig } from '@a-cube-io/expo-mutual-tls';
 
 const config: MutualTlsConfig = {
   certificateFormat: 'p12',
@@ -730,7 +730,7 @@ await ExpoMutualTlsModule.configure(config);
 
 **After (v0.1.x):**
 ```typescript
-import ExpoMutualTls from 'expo-mutual-tls';
+import ExpoMutualTls from '@a-cube-io/expo-mutual-tls';
 
 await ExpoMutualTls.configureP12('service', true);
 ```

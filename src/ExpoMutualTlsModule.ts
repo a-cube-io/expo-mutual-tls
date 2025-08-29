@@ -1,6 +1,13 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { NativeModule, requireNativeModule } from "expo";
 
-import { ExpoMutualTlsModuleEvents, MutualTlsConfig, StoreCertificateOptions, MakeRequestOptions, MakeRequestResult, ConfigureResult } from './ExpoMutualTls.types';
+import {
+  ExpoMutualTlsModuleEvents,
+  MutualTlsConfig,
+  StoreCertificateOptions,
+  MakeRequestOptions,
+  MakeRequestResult,
+  ConfigureResult,
+} from "./ExpoMutualTls.types";
 
 declare class ExpoMutualTlsModule extends NativeModule<ExpoMutualTlsModuleEvents> {
   configure(config: MutualTlsConfig): Promise<ConfigureResult>;
@@ -15,4 +22,4 @@ declare class ExpoMutualTlsModule extends NativeModule<ExpoMutualTlsModuleEvents
 }
 
 // This call loads the native module object from the JSI.
-export default requireNativeModule<ExpoMutualTlsModule>('ExpoMutualTls');
+export default requireNativeModule<ExpoMutualTlsModule>("ExpoMutualTls");

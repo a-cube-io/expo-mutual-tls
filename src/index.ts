@@ -1,18 +1,18 @@
-import ExpoMutualTlsModule from './ExpoMutualTlsModule';
-import { 
-  MutualTlsConfig, 
-  P12CertificateData, 
+import {
+  MutualTlsConfig,
+  P12CertificateData,
   PemCertificateData,
   MakeRequestOptions,
   MakeRequestResult,
   ConfigureResult,
   DebugLogEventPayload,
   ErrorEventPayload,
-  CertificateExpiryEventPayload
-} from './ExpoMutualTls.types';
+  CertificateExpiryEventPayload,
+} from "./ExpoMutualTls.types";
+import ExpoMutualTlsModule from "./ExpoMutualTlsModule";
 
 // Re-export types for convenience
-export * from './ExpoMutualTls.types';
+export * from "./ExpoMutualTls.types";
 
 // Simple utility functions for common operations
 export class ExpoMutualTls {
@@ -21,12 +21,15 @@ export class ExpoMutualTls {
    * @param keychainService - Keychain service identifier
    * @param enableLogging - Enable debug logging
    */
-  static async configureP12(keychainService: string = 'client.p12', enableLogging: boolean = false): Promise<ConfigureResult> {
+  static async configureP12(
+    keychainService: string = "client.p12",
+    enableLogging: boolean = false,
+  ): Promise<ConfigureResult> {
     const config: MutualTlsConfig = {
-      certificateFormat: 'p12',
+      certificateFormat: "p12",
       keychainServiceForP12: keychainService,
       keychainServiceForPassword: `${keychainService}.password`,
-      enableLogging
+      enableLogging,
     };
     return ExpoMutualTlsModule.configure(config);
   }
@@ -38,15 +41,15 @@ export class ExpoMutualTls {
    * @param enableLogging - Enable debug logging
    */
   static async configurePEM(
-    certService: string = 'expo.mtls.client.cert', 
-    keyService: string = 'expo.mtls.client.key',
-    enableLogging: boolean = false
+    certService: string = "expo.mtls.client.cert",
+    keyService: string = "expo.mtls.client.key",
+    enableLogging: boolean = false,
   ): Promise<ConfigureResult> {
     const config: MutualTlsConfig = {
-      certificateFormat: 'pem',
+      certificateFormat: "pem",
       keychainServiceForCertChain: certService,
       keychainServiceForPrivateKey: keyService,
-      enableLogging
+      enableLogging,
     };
     return ExpoMutualTlsModule.configure(config);
   }
@@ -67,8 +70,16 @@ export class ExpoMutualTls {
    * @param privateKey - PEM private key content
    * @param passphrase - Optional passphrase for an encrypted private key
    */
-  static async storePEM(certificate: string, privateKey: string, passphrase?: string): Promise<boolean> {
-    const certData: PemCertificateData = { certificate, privateKey, passphrase };
+  static async storePEM(
+    certificate: string,
+    privateKey: string,
+    passphrase?: string,
+  ): Promise<boolean> {
+    const certData: PemCertificateData = {
+      certificate,
+      privateKey,
+      passphrase,
+    };
     return ExpoMutualTlsModule.storeCertificate(certData);
   }
 
@@ -77,7 +88,10 @@ export class ExpoMutualTls {
    * @param url - Target URL
    * @param options - Optional request configuration
    */
-  static async request(url: string, options: Partial<MakeRequestOptions> = {}): Promise<MakeRequestResult> {
+  static async request(
+    url: string,
+    options: Partial<MakeRequestOptions> = {},
+  ): Promise<MakeRequestResult> {
     const requestOptions: MakeRequestOptions = { url, ...options };
     return ExpoMutualTlsModule.makeRequest(requestOptions);
   }
@@ -120,24 +134,26 @@ export class ExpoMutualTls {
 
   // Event handling utilities
   static onDebugLog(listener: (event: DebugLogEventPayload) => void) {
-    return ExpoMutualTlsModule.addListener('onDebugLog', listener);
+    return ExpoMutualTlsModule.addListener("onDebugLog", listener);
   }
 
   static onError(listener: (event: ErrorEventPayload) => void) {
-    return ExpoMutualTlsModule.addListener('onError', listener);
+    return ExpoMutualTlsModule.addListener("onError", listener);
   }
 
-  static onCertificateExpiry(listener: (event: CertificateExpiryEventPayload) => void) {
-    return ExpoMutualTlsModule.addListener('onCertificateExpiry', listener);
+  static onCertificateExpiry(
+    listener: (event: CertificateExpiryEventPayload) => void,
+  ) {
+    return ExpoMutualTlsModule.addListener("onCertificateExpiry", listener);
   }
 
   /**
    * Remove all event listeners
    */
   static removeAllListeners() {
-    ExpoMutualTlsModule.removeAllListeners('onDebugLog');
-    ExpoMutualTlsModule.removeAllListeners('onError');
-    ExpoMutualTlsModule.removeAllListeners('onCertificateExpiry');
+    ExpoMutualTlsModule.removeAllListeners("onDebugLog");
+    ExpoMutualTlsModule.removeAllListeners("onError");
+    ExpoMutualTlsModule.removeAllListeners("onCertificateExpiry");
   }
 }
 

@@ -39,8 +39,8 @@ npm run clean > /dev/null 2>&1 || true
 #fi
 
 # Skip lint for now (ESLint config issues)
-# echo "🔍 Skipping lint..."
-# npm run lint
+echo "🔍 Skipping lint..."
+npm run lint
 
 # Confirm publish
 echo ""

@@ -212,15 +212,16 @@ class ExpoMutualTlsModule : Module() {
     // --- makeRequest(options)
     AsyncFunction("makeRequest").Coroutine<Map<String, Any>, Map<String, Any>> { options: Map<String, Any> ->
       if (!isConfigured) throw MutualTlsException("Module not configured - call configure() first")
-      
+
       val url = options["url"] as? String ?: throw MutualTlsException("URL is required")
       val method = (options["method"] as? String ?: "GET").uppercase()
       @Suppress("UNCHECKED_CAST")
       val headers = options["headers"] as? Map<String, String> ?: emptyMap()
       val body = options["body"] as? String
-      
+      val responseType = options["responseType"] as? String
+
       withContext<Map<String, Any>>(Dispatchers.IO) {
-        performMtlsRequestWithOptions(url, method, headers, body)
+        performMtlsRequestWithOptions(url, method, headers, body, responseType)
       }
     }
 
@@ -626,16 +627,16 @@ class ExpoMutualTlsModule : Module() {
   }
 
 
-  private fun performMtlsRequestWithOptions(url: String, method: String, headers: Map<String, String>, body: String?): Map<String, Any> {
+  private fun performMtlsRequestWithOptions(url: String, method: String, headers: Map<String, String>, body: String?, responseType: String?): Map<String, Any> {
     try {
       val client = createMtlsOkHttpClient()
       val requestBuilder = okhttp3.Request.Builder().url(url)
-      
+
       // Add headers
       headers.forEach { (key, value) ->
         requestBuilder.addHeader(key, value)
       }
-      
+
       // Add body for POST, PUT, PATCH methods
       val requestBody = when (method) {
         "POST", "PUT", "PATCH" -> {
@@ -644,13 +645,30 @@ class ExpoMutualTlsModule : Module() {
         }
         else -> null
       }
-      
+
       val request = requestBuilder.method(method, requestBody).build()
-      
+
       client.newCall(request).execute().use { response ->
         val handshake = response.handshake
-        val responseBody = response.body?.string() ?: ""
-        
+
+        // Process response body based on responseType
+        val responseBody = response.body?.bytes()?.let { bytes ->
+          when (responseType) {
+            "json", "text", null -> {
+              // Return as string for json and text types
+              String(bytes, Charsets.UTF_8)
+            }
+            "blob", "arraybuffer" -> {
+              // Return base64 encoded data for binary response types
+              Base64.encodeToString(bytes, Base64.NO_WRAP)
+            }
+            else -> {
+              // Default to string
+              String(bytes, Charsets.UTF_8)
+            }
+          }
+        } ?: ""
+
         return mapOf(
           "success" to true,
           "statusCode" to response.code,

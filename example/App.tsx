@@ -335,6 +335,7 @@ export default function App() {
           Authorization: "Bearer your-token-here",
         },
         body: JSON.stringify({ test: "data" }),
+        responseType: "json", // Can be 'json', 'text', 'blob', or 'arraybuffer'
       });
 
       console.log("mTLS Request Result:", result);
@@ -360,6 +361,55 @@ export default function App() {
       addLog(`Connection error: ${error}`);
       // console.error('Connection error:', error);
       Alert.alert("Connection Error", `Failed to test connection: ${error}`);
+    }
+  };
+
+  // Test different response types
+  const testResponseTypes = async () => {
+    if (!isConfigured) {
+      Alert.alert("Error", "Please configure and store certificates first");
+      return;
+    }
+
+    try {
+      setStatus("Testing Response Types...");
+      addLog("Testing different response types");
+
+      const testUrl = "https:your-test-server.com/api/v1/test";
+
+      // Test JSON response
+      addLog("Testing JSON response type...");
+      const jsonResult = await ExpoMutualTls.request(testUrl, {
+        method: "GET",
+        responseType: "json",
+      });
+      addLog(`JSON response: ${jsonResult.body.substring(0, 100)}...`);
+
+      // Test text response
+      addLog("Testing text response type...");
+      const textResult = await ExpoMutualTls.request(testUrl, {
+        method: "GET",
+        responseType: "text",
+      });
+      addLog(`Text response: ${textResult.body.substring(0, 100)}...`);
+
+      // Test blob response (for binary data like images, PDFs)
+      addLog("Testing blob response type...");
+      const blobResult = await ExpoMutualTls.request(testUrl, {
+        method: "GET",
+        responseType: "blob",
+      });
+      addLog(`Blob response (base64): ${blobResult.body.substring(0, 50)}...`);
+
+      setStatus("Response Types Test Complete");
+      Alert.alert(
+        "Success",
+        "All response types tested successfully. Check logs for details.",
+      );
+    } catch (error) {
+      setStatus("Response Types Test Error");
+      addLog(`Response types test error: ${error}`);
+      Alert.alert("Test Error", `Failed to test response types: ${error}`);
     }
   };
 
@@ -437,6 +487,12 @@ export default function App() {
           <Button
             title="Test mTLS Connection"
             onPress={testConnection}
+            disabled={!isConfigured}
+          />
+          <View style={styles.buttonSpacer} />
+          <Button
+            title="Test Response Types"
+            onPress={testResponseTypes}
             disabled={!isConfigured}
           />
         </Group>

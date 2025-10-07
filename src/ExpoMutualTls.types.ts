@@ -73,11 +73,14 @@ export type ConfigureResult = {
 
 export type StoreCertificateOptions = P12CertificateData | PemCertificateData;
 
+export type ResponseType = "json" | "blob" | "arraybuffer" | "text";
+
 export type MakeRequestOptions = {
   url: string;
   method?: string;
   headers?: Record<string, string>;
   body?: string;
+  responseType?: ResponseType;
 };
 
 export type MakeRequestResult = {

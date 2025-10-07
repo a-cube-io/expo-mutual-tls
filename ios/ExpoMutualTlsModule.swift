@@ -369,21 +369,22 @@ public class ExpoMutualTlsModule: Module, @unchecked Sendable {
         guard isConfigured else {
             throw ExpoMutualTlsError.notConfigured
         }
-        
+
         guard let url = options["url"] as? String else {
             throw ExpoMutualTlsError.missingRequiredField("URL is required")
         }
-        
+
         let method = options["method"] as? String ?? "GET"
         let headers = options["headers"] as? [String: String] ?? [:]
         let bodyString = options["body"] as? String
         let bodyData = bodyString?.data(using: .utf8)
-        
+        let responseType = options["responseType"] as? String
+
         emitDebugLog(type: "request", message: "Starting mTLS request", method: method, url: url)
-        
+
         do {
-            let result = try await networkManager.executeRequest(url: url, method: method, headers: headers, body: bodyData, withMTLS: true)
-            
+            let result = try await networkManager.executeRequest(url: url, method: method, headers: headers, body: bodyData, withMTLS: true, responseType: responseType)
+
             emitDebugLog(
                 type: "request_completed",
                 message: result.success ? "Request successful" : "Request failed",
@@ -391,9 +392,9 @@ public class ExpoMutualTlsModule: Module, @unchecked Sendable {
                 url: url,
                 statusCode: result.statusCode
             )
-            
+
             return result
-            
+
         } catch {
             emitDebugLog(type: "request_error", message: "Request failed: \(error.localizedDescription)", method: method, url: url)
             throw error

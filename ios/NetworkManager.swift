@@ -6,7 +6,7 @@ internal class NetworkManager {
     
     private let sslContextManager = SSLContextManager()
     
-    func executeRequest(url: String, method: String, headers: [String: String], body: Data?, withMTLS: Bool) async throws -> MakeRequestResult {
+    func executeRequest(url: String, method: String, headers: [String: String], body: Data?, withMTLS: Bool, responseType: String? = nil) async throws -> MakeRequestResult {
         guard let requestURL = URL(string: url) else {
             throw ExpoMutualTlsError.invalidURL(url)
         }
@@ -43,35 +43,50 @@ internal class NetworkManager {
         do {
             let (data, response) = try await session.data(for: request)
             let duration = CFAbsoluteTimeGetCurrent() - startTime
-            
-            return processResponse(data: data, response: response, duration: duration, error: nil)
-            
+
+            return processResponse(data: data, response: response, duration: duration, error: nil, responseType: responseType)
+
         } catch {
             let duration = CFAbsoluteTimeGetCurrent() - startTime
             throw ExpoMutualTlsError.networkRequestFailed("\(error.localizedDescription) (duration: \(Int(duration * 1000))ms)")
         }
     }
     
-    private func processResponse(data: Data?, response: URLResponse?, duration: TimeInterval, error: Error?) -> MakeRequestResult {
+    private func processResponse(data: Data?, response: URLResponse?, duration: TimeInterval, error: Error?, responseType: String?) -> MakeRequestResult {
         if let error = error {
             return MakeRequestResult.failure(error.localizedDescription)
         }
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             return MakeRequestResult.failure("Invalid response type")
         }
-        
-        let responseBody = data.map { String(data: $0, encoding: .utf8) ?? "" } ?? ""
-        
+
+        // Process response body based on responseType
+        let responseBody: String
+        if let data = data {
+            let type = responseType ?? "text"
+            switch type {
+            case "json", "text":
+                responseBody = String(data: data, encoding: .utf8) ?? ""
+            case "blob", "arraybuffer":
+                // Return base64 encoded data for binary response types
+                responseBody = data.base64EncodedString()
+            default:
+                responseBody = String(data: data, encoding: .utf8) ?? ""
+            }
+        } else {
+            responseBody = ""
+        }
+
         // Convert headers to expected format
         let headers = httpResponse.allHeaderFields.reduce(into: [String: [String]]()) { result, element in
             if let key = element.key as? String, let value = element.value as? String {
                 result[key] = [value]
             }
         }
-        
+
         let success = (200...299).contains(httpResponse.statusCode)
-        
+
         return MakeRequestResult(
             success: success,
             statusCode: httpResponse.statusCode,

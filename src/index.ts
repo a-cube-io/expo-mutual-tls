@@ -2,12 +2,14 @@ import {
   MutualTlsConfig,
   P12CertificateData,
   PemCertificateData,
+  CertificateData,
   MakeRequestOptions,
   MakeRequestResult,
   ConfigureResult,
   DebugLogEventPayload,
   ErrorEventPayload,
   CertificateExpiryEventPayload,
+  ParseCertificateResult,
 } from "./ExpoMutualTls.types";
 import ExpoMutualTlsModule from "./ExpoMutualTlsModule";
 
@@ -154,6 +156,54 @@ export class ExpoMutualTls {
     ExpoMutualTlsModule.removeAllListeners("onDebugLog");
     ExpoMutualTlsModule.removeAllListeners("onError");
     ExpoMutualTlsModule.removeAllListeners("onCertificateExpiry");
+  }
+
+  /**
+   * Parse certificate and extract detailed information
+   * @param certificateData - Certificate data (P12 or PEM format)
+   * @returns Certificate information including subject, issuer, validity, etc.
+   */
+  static async parseCertificate(
+    certificateData: CertificateData,
+  ): Promise<ParseCertificateResult> {
+    return ExpoMutualTlsModule.parseCertificate(certificateData);
+  }
+
+  /**
+   * Parse P12 certificate with simple interface
+   * @param p12Base64 - Base64 encoded P12 certificate
+   * @param password - P12 password
+   * @returns Certificate information
+   */
+  static async parseCertificateP12(
+    p12Base64: string,
+    password: string,
+  ): Promise<ParseCertificateResult> {
+    const certData: P12CertificateData = { p12Data: p12Base64, password };
+    return ExpoMutualTlsModule.parseCertificate(certData);
+  }
+
+  /**
+   * Parse PEM certificate with simple interface
+   * @param certificate - PEM certificate content
+   * @returns Certificate information
+   */
+  static async parseCertificatePEM(
+    certificate: string,
+  ): Promise<ParseCertificateResult> {
+    const certData: PemCertificateData = {
+      certificate,
+      privateKey: "", // Not needed for parsing, only certificate info
+    };
+    return ExpoMutualTlsModule.parseCertificate(certData);
+  }
+
+  /**
+   * Get certificate information from stored certificates
+   * @returns Certificate information for all stored certificates
+   */
+  static async getCertificatesInfo(): Promise<ParseCertificateResult> {
+    return ExpoMutualTlsModule.getCertificatesInfo();
   }
 }
 

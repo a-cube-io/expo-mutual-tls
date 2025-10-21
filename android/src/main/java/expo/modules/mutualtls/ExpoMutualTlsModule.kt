@@ -200,6 +200,28 @@ class ExpoMutualTlsModule : Module() {
       }
     }
 
+    // --- parseCertificate
+    AsyncFunction("parseCertificate").Coroutine { certificateData: Map<String, Any> ->
+      try {
+        val certificates = parseCertificateInfo(certificateData)
+        mapOf("certificates" to certificates)
+      } catch (e: Exception) {
+        Log.e(TAG, "parseCertificate failed", e)
+        throw e.toCodedException()
+      }
+    }
+
+    // --- getCertificatesInfo
+    AsyncFunction("getCertificatesInfo") {
+      try {
+        val certificates = getStoredCertificatesInfo()
+        mapOf("certificates" to certificates)
+      } catch (e: Exception) {
+        Log.e(TAG, "getCertificatesInfo failed", e)
+        throw e.toCodedException()
+      }
+    }
+
     // --- testConnection(url)
     AsyncFunction("testConnection").Coroutine { url: String ->
       if (!isConfigured) throw MutualTlsException("Module not configured - call configure() first")
@@ -235,6 +257,84 @@ class ExpoMutualTlsModule : Module() {
   }
 
   // ---------- Internal helpers ----------
+
+  private fun parseCertificateInfo(certificateData: Map<String, Any>): List<Map<String, Any?>> {
+    // Determine format from certificate data
+    return if (certificateData.containsKey("p12Data") && certificateData.containsKey("password")) {
+      // P12 format
+      val p12Base64 = certificateData["p12Data"] as? String
+        ?: throw MutualTlsException("P12 data is required")
+      val password = certificateData["password"] as? String
+        ?: throw MutualTlsException("Password is required")
+
+      val p12Data = Base64.decode(p12Base64, Base64.NO_WRAP)
+      val keyStore = KeyStore.getInstance("PKCS12").apply {
+        load(ByteArrayInputStream(p12Data), password.toCharArray())
+      }
+
+      // Extract all certificates from the P12
+      val certificates = mutableListOf<Map<String, Any?>>()
+      val aliases = keyStore.aliases()
+      while (aliases.hasMoreElements()) {
+        val alias = aliases.nextElement()
+        val cert = keyStore.getCertificate(alias) as? X509Certificate
+        cert?.let {
+          certificates.add(pemParser.extractCertificateInfo(it))
+        }
+      }
+      certificates
+
+    } else if (certificateData.containsKey("certificate")) {
+      // PEM format
+      val certPem = certificateData["certificate"] as? String
+        ?: throw MutualTlsException("Certificate PEM is required")
+
+      val certs = pemParser.parseCertificates(certPem)
+      certs.map { pemParser.extractCertificateInfo(it) }
+
+    } else {
+      throw MutualTlsException("Either p12Data+password or certificate required")
+    }
+  }
+
+  private fun getStoredCertificatesInfo(): List<Map<String, Any?>> {
+    if (currentConfig == null) {
+      throw MutualTlsException("Module not configured - call configure() first")
+    }
+
+    val certData = getCertificateFromSecureStorageInternal()
+      ?: throw CertificateNotFoundException()
+
+    return when (currentConfig?.certificateFormat) {
+      CertificateFormat.P12 -> {
+        val password = getPasswordFromSecureStorageInternal()
+          ?: throw MutualTlsException("P12 password not found in keychain")
+
+        val p12Data = Base64.decode(certData, Base64.NO_WRAP)
+        val keyStore = KeyStore.getInstance("PKCS12").apply {
+          load(ByteArrayInputStream(p12Data), password.toCharArray())
+        }
+
+        val certificates = mutableListOf<Map<String, Any?>>()
+        val aliases = keyStore.aliases()
+        while (aliases.hasMoreElements()) {
+          val alias = aliases.nextElement()
+          val cert = keyStore.getCertificate(alias) as? X509Certificate
+          cert?.let {
+            certificates.add(pemParser.extractCertificateInfo(it))
+          }
+        }
+        certificates
+      }
+      CertificateFormat.PEM -> {
+        val certs = pemParser.parseCertificates(certData)
+        certs.map { pemParser.extractCertificateInfo(it) }
+      }
+      else -> {
+        throw MutualTlsException("Unknown certificate format")
+      }
+    }
+  }
 
   private fun setSslState(factory: SSLSocketFactory?, tm: X509TrustManager?) {
     synchronized(stateLock) {

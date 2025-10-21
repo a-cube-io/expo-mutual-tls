@@ -92,3 +92,38 @@ export type MakeRequestResult = {
   tlsVersion: string;
   cipherSuite: string;
 };
+
+export type CertificateSubject = {
+  commonName?: string;
+  organization?: string;
+  organizationalUnit?: string;
+  country?: string;
+  state?: string;
+  locality?: string;
+  emailAddress?: string;
+};
+
+export type CertificateFingerprints = {
+  sha1: string;
+  sha256: string;
+};
+
+export type CertificateInfo = {
+  subject: CertificateSubject;
+  issuer: CertificateSubject;
+  serialNumber: string;
+  version: number;
+  validFrom: number; // Unix timestamp in milliseconds
+  validTo: number; // Unix timestamp in milliseconds
+  fingerprints: CertificateFingerprints;
+  publicKeyAlgorithm: string;
+  publicKeySize?: number;
+  signatureAlgorithm: string;
+  keyUsage?: string[];
+  extendedKeyUsage?: string[];
+  subjectAlternativeNames?: string[];
+};
+
+export type ParseCertificateResult = {
+  certificates: CertificateInfo[];
+};

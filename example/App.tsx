@@ -504,6 +504,80 @@ export default function App() {
     }
   };
 
+  // Get stored certificates info
+  const getStoredCertificatesInfo = async () => {
+    if (isLoading) return;
+
+    try {
+      setIsLoading(true);
+      setStatus("Retrieving Stored Certificates...");
+      addLog("Retrieving stored certificates from keychain");
+
+      const certInfo = await ExpoMutualTls.getCertificatesInfo();
+      addLog(`Found ${certInfo.certificates.length} stored certificate(s)`);
+
+      if (certInfo.certificates.length > 0) {
+        const cert = certInfo.certificates[0];
+
+        // Log certificate details
+        addLog(`📋 Subject: ${cert.subject.commonName || "N/A"}`);
+        addLog(`📋 Issuer: ${cert.issuer.commonName || "N/A"}`);
+        addLog(
+          `📋 Valid From: ${new Date(cert.validFrom).toLocaleDateString()}`,
+        );
+        addLog(`📋 Valid To: ${new Date(cert.validTo).toLocaleDateString()}`);
+        addLog(`📋 Serial: ${cert.serialNumber.substring(0, 16)}...`);
+        addLog(
+          `📋 Algorithm: ${cert.publicKeyAlgorithm} ${cert.publicKeySize ? `(${cert.publicKeySize} bits)` : ""}`,
+        );
+        addLog(
+          `📋 Fingerprint (SHA-256): ${cert.fingerprints.sha256.substring(0, 32)}...`,
+        );
+
+        // Show detailed alert
+        const validFrom = new Date(cert.validFrom).toLocaleDateString();
+        const validTo = new Date(cert.validTo).toLocaleDateString();
+        const daysUntilExpiry = Math.ceil(
+          (cert.validTo - Date.now()) / (1000 * 60 * 60 * 24),
+        );
+
+        Alert.alert(
+          "Stored Certificate Information",
+          `Subject: ${cert.subject.commonName || "N/A"}\n` +
+            `Organization: ${cert.subject.organization || "N/A"}\n` +
+            `Issuer: ${cert.issuer.commonName || "N/A"}\n\n` +
+            `Valid From: ${validFrom}\n` +
+            `Valid To: ${validTo}\n` +
+            `Days Until Expiry: ${daysUntilExpiry}\n\n` +
+            `Algorithm: ${cert.publicKeyAlgorithm}\n` +
+            `Key Size: ${cert.publicKeySize || "N/A"} bits\n` +
+            `Signature: ${cert.signatureAlgorithm}\n\n` +
+            `Serial: ${cert.serialNumber.substring(0, 24)}...\n` +
+            `SHA-256: ${cert.fingerprints.sha256.substring(0, 32)}...`,
+          [{ text: "OK" }],
+        );
+
+        setStatus("Stored Certificates Retrieved");
+      } else {
+        addLog("No certificates found in keychain");
+        Alert.alert(
+          "No Certificates",
+          "No certificates found in secure storage",
+        );
+        setStatus("No Certificates Found");
+      }
+    } catch (error) {
+      setStatus("Retrieval Error");
+      addLog(`Stored certificates retrieval error: ${error}`);
+      Alert.alert(
+        "Retrieval Error",
+        `Failed to retrieve stored certificates: ${error}`,
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Clear all event listeners (optional utility - cleanup is handled automatically in useEffect)
   const clearAllListeners = () => {
     ExpoMutualTls.removeAllListeners();
@@ -555,6 +629,14 @@ export default function App() {
             title={isLoading ? "Parsing..." : "Parse Certificate Info"}
             onPress={parseCertificateInfo}
             disabled={isLoading}
+          />
+          <View style={styles.buttonSpacer} />
+          <Button
+            title={
+              isLoading ? "Retrieving..." : "Get Stored Certificates Info"
+            }
+            onPress={getStoredCertificatesInfo}
+            disabled={isLoading || !isConfigured}
           />
           <View style={styles.buttonSpacer} />
           <Button

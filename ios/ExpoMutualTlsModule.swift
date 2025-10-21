@@ -119,6 +119,20 @@ public class ExpoMutualTlsModule: Module, @unchecked Sendable {
             }
         }
 
+        AsyncFunction("getCertificatesInfo") { [weak self] in
+            guard let self = self else {
+                throw ExpoMutualTlsError.unknownError("Module deallocated")
+            }
+
+            do {
+                let certificates = try await self.getStoredCertificatesInfo()
+                return ["certificates": certificates]
+            } catch {
+                self.handleError(error, context: "getCertificatesInfo")
+                throw error
+            }
+        }
+
         // Network Operations
         AsyncFunction("makeRequest") { [weak self] (options: [String: Any]) in
             guard let self = self else {
@@ -394,6 +408,49 @@ public class ExpoMutualTlsModule: Module, @unchecked Sendable {
             return try certificateParser.parseCertificateDetailsPEM(pemString: certPem)
         } else {
             throw ExpoMutualTlsError.missingRequiredField("Either p12Data+password or certificate required")
+        }
+    }
+
+    private func getStoredCertificatesInfo() async throws -> [[String: Any]] {
+        guard let config = currentConfig else {
+            throw ExpoMutualTlsError.notConfigured
+        }
+
+        // Check if certificates exist
+        let hasCert = await hasCertificate()
+        guard hasCert else {
+            throw ExpoMutualTlsError.certificateNotFound("No certificates stored in keychain")
+        }
+
+        emitDebugLog(type: "get_certificates_info", message: "Retrieving stored certificates")
+
+        // Retrieve and parse certificates based on format
+        switch config.certificateFormat {
+        case .p12:
+            let p12Service = config.keychainServiceForP12 ?? "client.p12"
+            let passwordService = config.keychainServiceForPassword ?? "client.p12.password"
+
+            guard let p12Base64 = keychainManager.retrieveFromKeychain(service: p12Service),
+                  let password = keychainManager.retrieveFromKeychain(service: passwordService) else {
+                throw ExpoMutualTlsError.certificateNotFound("P12 certificate or password not found in keychain")
+            }
+
+            guard let p12Data = Data(base64Encoded: p12Base64) else {
+                throw ExpoMutualTlsError.invalidCertificateFormat("Invalid P12 data in keychain")
+            }
+
+            emitDebugLog(type: "get_certificates_info", message: "Parsing stored P12 certificate")
+            return try certificateParser.parseCertificateDetailsP12(p12Data: p12Data, password: password)
+
+        case .pem:
+            let certService = config.keychainServiceForCertChain ?? "expo.mtls.client.cert"
+
+            emitDebugLog(type: "get_certificates_info", message: "Retrieving stored PEM certificate")
+            let certificate = try keychainManager.retrievePEMCertificate(certService: certService)
+
+            emitDebugLog(type: "get_certificates_info", message: "Extracting certificate information")
+            let certInfo = certificateParser.extractCertificateInfo(from: certificate)
+            return [certInfo]
         }
     }
     

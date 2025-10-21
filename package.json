@@ -1,6 +1,6 @@
 {
   "name": "@a-cube-io/expo-mutual-tls",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Expo Mutual TLS module for iOS and Android.",
   "main": "build/index.js",
   "types": "build/index.d.ts",

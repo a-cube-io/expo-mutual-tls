@@ -103,7 +103,22 @@ public class ExpoMutualTlsModule: Module, @unchecked Sendable {
         AsyncFunction("hasCertificate") { [weak self] in
             return await self?.hasCertificate() ?? false
         }
-        
+
+        // Certificate Parsing
+        AsyncFunction("parseCertificate") { [weak self] (certificateData: [String: Any]) in
+            guard let self = self else {
+                throw ExpoMutualTlsError.unknownError("Module deallocated")
+            }
+
+            do {
+                let certificates = try self.parseCertificateInfo(certificateData: certificateData)
+                return ["certificates": certificates]
+            } catch {
+                self.handleError(error, context: "parseCertificate")
+                throw error
+            }
+        }
+
         // Network Operations
         AsyncFunction("makeRequest") { [weak self] (options: [String: Any]) in
             guard let self = self else {
@@ -351,17 +366,34 @@ public class ExpoMutualTlsModule: Module, @unchecked Sendable {
         guard let config = currentConfig else {
             return false
         }
-        
+
         switch config.certificateFormat {
         case .p12:
             let p12Service = config.keychainServiceForP12 ?? "client.p12"
             return keychainManager.keychainContainsItem(service: p12Service)
-            
+
         case .pem:
             let certService = config.keychainServiceForCertChain ?? "expo.mtls.client.cert"
             let keyService = config.keychainServiceForPrivateKey ?? "expo.mtls.client.key"
-            
+
             return keychainManager.hasPEMCertificate(certService: certService, keyService: keyService)
+        }
+    }
+
+    private func parseCertificateInfo(certificateData: [String: Any]) throws -> [[String: Any]] {
+        // Determine format from certificate data
+        if let p12Data = certificateData["p12Data"] as? String,
+           let password = certificateData["password"] as? String {
+            // P12 format
+            guard let p12Bytes = Data(base64Encoded: p12Data) else {
+                throw ExpoMutualTlsError.invalidCertificateFormat("Invalid P12 base64 data")
+            }
+            return try certificateParser.parseCertificateDetailsP12(p12Data: p12Bytes, password: password)
+        } else if let certPem = certificateData["certificate"] as? String {
+            // PEM format
+            return try certificateParser.parseCertificateDetailsPEM(pemString: certPem)
+        } else {
+            throw ExpoMutualTlsError.missingRequiredField("Either p12Data+password or certificate required")
         }
     }
     

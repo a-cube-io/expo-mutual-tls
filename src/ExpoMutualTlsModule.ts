@@ -7,6 +7,8 @@ import {
   MakeRequestOptions,
   MakeRequestResult,
   ConfigureResult,
+  CertificateData,
+  ParseCertificateResult,
 } from "./ExpoMutualTls.types";
 
 declare class ExpoMutualTlsModule extends NativeModule<ExpoMutualTlsModuleEvents> {
@@ -15,6 +17,9 @@ declare class ExpoMutualTlsModule extends NativeModule<ExpoMutualTlsModuleEvents
   storeP12Certificate(p12Base64: string, password: string): Promise<boolean>;
   removeCertificate(): Promise<void>;
   hasCertificate(): Promise<boolean>;
+  parseCertificate(
+    certificateData: CertificateData,
+  ): Promise<ParseCertificateResult>;
   testConnection(url: string): Promise<MakeRequestResult>;
   makeRequest(options: MakeRequestOptions): Promise<MakeRequestResult>;
   isConfigured: boolean;

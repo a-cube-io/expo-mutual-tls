@@ -429,6 +429,81 @@ export default function App() {
     }
   };
 
+  // Parse and display certificate information
+  const parseCertificateInfo = async () => {
+    if (isLoading) return;
+
+    try {
+      setIsLoading(true);
+      setStatus("Parsing Certificate...");
+      addLog("Loading and parsing certificate");
+
+      let certInfo;
+
+      if (currentFormat === "p12") {
+        // Parse P12 certificate
+        const { p12Data, password } = await loadP12Certificate();
+        certInfo = await ExpoMutualTls.parseCertificateP12(p12Data, password);
+        addLog("P12 certificate parsed successfully");
+      } else {
+        // Parse PEM certificate
+        const { certificate } = await loadPemCertificates();
+        certInfo = await ExpoMutualTls.parseCertificatePEM(certificate);
+        addLog("PEM certificate parsed successfully");
+      }
+
+      if (certInfo.certificates.length > 0) {
+        const cert = certInfo.certificates[0];
+
+        // Log certificate details
+        addLog(`📋 Subject: ${cert.subject.commonName || "N/A"}`);
+        addLog(`📋 Issuer: ${cert.issuer.commonName || "N/A"}`);
+        addLog(
+          `📋 Valid From: ${new Date(cert.validFrom).toLocaleDateString()}`,
+        );
+        addLog(`📋 Valid To: ${new Date(cert.validTo).toLocaleDateString()}`);
+        addLog(`📋 Serial: ${cert.serialNumber.substring(0, 16)}...`);
+        addLog(
+          `📋 Algorithm: ${cert.publicKeyAlgorithm} ${cert.publicKeySize ? `(${cert.publicKeySize} bits)` : ""}`,
+        );
+        addLog(
+          `📋 Fingerprint (SHA-256): ${cert.fingerprints.sha256.substring(0, 32)}...`,
+        );
+
+        // Show detailed alert
+        const validFrom = new Date(cert.validFrom).toLocaleDateString();
+        const validTo = new Date(cert.validTo).toLocaleDateString();
+        const daysUntilExpiry = Math.ceil(
+          (cert.validTo - Date.now()) / (1000 * 60 * 60 * 24),
+        );
+
+        Alert.alert(
+          "Certificate Information",
+          `Subject: ${cert.subject.commonName || "N/A"}\n` +
+            `Organization: ${cert.subject.organization || "N/A"}\n` +
+            `Issuer: ${cert.issuer.commonName || "N/A"}\n\n` +
+            `Valid From: ${validFrom}\n` +
+            `Valid To: ${validTo}\n` +
+            `Days Until Expiry: ${daysUntilExpiry}\n\n` +
+            `Algorithm: ${cert.publicKeyAlgorithm}\n` +
+            `Key Size: ${cert.publicKeySize || "N/A"} bits\n` +
+            `Signature: ${cert.signatureAlgorithm}\n\n` +
+            `Serial: ${cert.serialNumber.substring(0, 24)}...\n` +
+            `SHA-256: ${cert.fingerprints.sha256.substring(0, 32)}...`,
+          [{ text: "OK" }],
+        );
+
+        setStatus("Certificate Parsed");
+      }
+    } catch (error) {
+      setStatus("Parse Error");
+      addLog(`Certificate parsing error: ${error}`);
+      Alert.alert("Parse Error", `Failed to parse certificate: ${error}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Clear all event listeners (optional utility - cleanup is handled automatically in useEffect)
   const clearAllListeners = () => {
     ExpoMutualTls.removeAllListeners();
@@ -474,6 +549,12 @@ export default function App() {
             title="Check Certificates"
             onPress={checkCertificates}
             disabled={isLoading || !isConfigured}
+          />
+          <View style={styles.buttonSpacer} />
+          <Button
+            title={isLoading ? "Parsing..." : "Parse Certificate Info"}
+            onPress={parseCertificateInfo}
+            disabled={isLoading}
           />
           <View style={styles.buttonSpacer} />
           <Button

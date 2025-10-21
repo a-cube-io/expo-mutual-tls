@@ -20,6 +20,7 @@ declare class ExpoMutualTlsModule extends NativeModule<ExpoMutualTlsModuleEvents
   parseCertificate(
     certificateData: CertificateData,
   ): Promise<ParseCertificateResult>;
+  getCertificatesInfo(): Promise<ParseCertificateResult>;
   testConnection(url: string): Promise<MakeRequestResult>;
   makeRequest(options: MakeRequestOptions): Promise<MakeRequestResult>;
   isConfigured: boolean;

@@ -197,6 +197,14 @@ export class ExpoMutualTls {
     };
     return ExpoMutualTlsModule.parseCertificate(certData);
   }
+
+  /**
+   * Get certificate information from stored certificates
+   * @returns Certificate information for all stored certificates
+   */
+  static async getCertificatesInfo(): Promise<ParseCertificateResult> {
+    return ExpoMutualTlsModule.getCertificatesInfo();
+  }
 }
 
 // Export both the utility class and the raw module for advanced usage

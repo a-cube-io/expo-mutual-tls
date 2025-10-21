@@ -211,6 +211,17 @@ class ExpoMutualTlsModule : Module() {
       }
     }
 
+    // --- getCertificatesInfo
+    AsyncFunction("getCertificatesInfo") {
+      try {
+        val certificates = getStoredCertificatesInfo()
+        mapOf("certificates" to certificates)
+      } catch (e: Exception) {
+        Log.e(TAG, "getCertificatesInfo failed", e)
+        throw e.toCodedException()
+      }
+    }
+
     // --- testConnection(url)
     AsyncFunction("testConnection").Coroutine { url: String ->
       if (!isConfigured) throw MutualTlsException("Module not configured - call configure() first")
@@ -283,6 +294,45 @@ class ExpoMutualTlsModule : Module() {
 
     } else {
       throw MutualTlsException("Either p12Data+password or certificate required")
+    }
+  }
+
+  private fun getStoredCertificatesInfo(): List<Map<String, Any?>> {
+    if (currentConfig == null) {
+      throw MutualTlsException("Module not configured - call configure() first")
+    }
+
+    val certData = getCertificateFromSecureStorageInternal()
+      ?: throw CertificateNotFoundException()
+
+    return when (currentConfig?.certificateFormat) {
+      CertificateFormat.P12 -> {
+        val password = getPasswordFromSecureStorageInternal()
+          ?: throw MutualTlsException("P12 password not found in keychain")
+
+        val p12Data = Base64.decode(certData, Base64.NO_WRAP)
+        val keyStore = KeyStore.getInstance("PKCS12").apply {
+          load(ByteArrayInputStream(p12Data), password.toCharArray())
+        }
+
+        val certificates = mutableListOf<Map<String, Any?>>()
+        val aliases = keyStore.aliases()
+        while (aliases.hasMoreElements()) {
+          val alias = aliases.nextElement()
+          val cert = keyStore.getCertificate(alias) as? X509Certificate
+          cert?.let {
+            certificates.add(pemParser.extractCertificateInfo(it))
+          }
+        }
+        certificates
+      }
+      CertificateFormat.PEM -> {
+        val certs = pemParser.parseCertificates(certData)
+        certs.map { pemParser.extractCertificateInfo(it) }
+      }
+      else -> {
+        throw MutualTlsException("Unknown certificate format")
+      }
     }
   }
 
